@@ -1,0 +1,15 @@
+
+
+============= PO VULKAN ==============
+
+This is a rendering engine for being able to 
+load simple primitives and construct scenes for testing physics.
+
+======================================
+
+stage 1 ====== Build the renderer
+a) we are not going to worry about reusing logical devices and saving memory by reusing graphics pipelines and the like.
+
+later we can circle back to this idea and cache the logical devices when requesting one and needing to make a new one.
+
+b) surfaces will act as the "window"
