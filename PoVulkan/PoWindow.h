@@ -1,7 +1,7 @@
 #pragma once
 
 #include "PoGlfw.h"
-#include "PoVulkanSurface.h"
+#include "PoVulkanDevice.h"
 
 #include <string>
 #include <memory>
@@ -21,7 +21,7 @@ struct SPoWindowSettings
 	int mWidth = 800;
 	int mHeight = 600;
 	std::string mName = "PoVulkan";
-	SPoVulkanSurfaceSettings mSurface;
+	SPoVulkanDeviceSettings mDevice;
 
 };
 
@@ -29,7 +29,7 @@ struct SPoWindowSettings
 struct SPoWindowResources
 {
 	GLFWwindow *mpWindow = nullptr;
-	SPoVulkanSurfaceResources mSurface;
+	SPoVulkanDeviceResources mDevice;
 	SPoWindowResizeCommand mResizeCommand;
 };
 
@@ -37,7 +37,7 @@ struct SPoWindowState
 {
 	VkInstance mVulkanInstance = VK_NULL_HANDLE;
 	VkPhysicalDevice mPhysicalDevice = VK_NULL_HANDLE;
-	SPoVulkanSurfaceState mSurface = {};
+	SPoVulkanDeviceState mDevice = {};
 	int mResizeCommandId = 0;
 };
 

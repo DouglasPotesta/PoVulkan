@@ -1,7 +1,7 @@
 #pragma once
 
 #include "PoGlfw.h"
-#include "PoVulkanSurface.h"
+#include "PoVulkanDevice.h"
 
 
 #include <vector>
@@ -24,19 +24,16 @@ struct SPoVulkanSettings
 	std::string mName = "PoVulkan";
 
 	bool mIsValidationLayersEnabled = PO_DEBUG_VALIDATION_LAYERS_ENABLED_DEFAULT;
-	SPoVulkanSurfaceSettings mSurface;
 };
 
 struct SPoVulkanState
 {
-	SPoVulkanSurfaceState mSurface;
 };
 
 struct SPoVulkanResources
 {
 	VkInstance mInstance;
 	VkDebugUtilsMessengerEXT mDebugMessenger;
-	SPoVulkanSurfaceResources mSurface;
 };
 
 namespace NPoVulkanBehavior

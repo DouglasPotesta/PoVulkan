@@ -27,13 +27,16 @@
     <ClCompile Include="PoVulkan.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="PoVulkanSurface.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="PoVulkanSwapchain.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="PoVulkanDevice.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PoTexture.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PoMesh.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -50,9 +53,6 @@
     <ClInclude Include="PoGlfw.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="PoVulkanSurface.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="PoVulkanSwapchain.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -63,6 +63,21 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="PoGlm.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PoEngine.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PoResourceManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PoResource.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PoTexture.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PoMesh.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

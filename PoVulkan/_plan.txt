@@ -13,3 +13,45 @@ a) we are not going to worry about reusing logical devices and saving memory by 
 later we can circle back to this idea and cache the logical devices when requesting one and needing to make a new one.
 
 b) surfaces will act as the "window"
+
+c) we now are at a crossroads with the original implementation
+- original used global single texture for the texture image
+- our version wants to make it so you can load in multiple textures
+- same for models
+- need to design how we are going to organize things generally
+
+I'll probably want a simple asset system to start. maybe abstract a smidge to start.
+- have a struct Called SPoAssetPath
+- NPoAssetBehavior::LoadAsset(SPoAssetPath path) => SPoAsset
+- SPoAsset has a header with a type a name, and a datas
+- - type is switched to call into a corrersponding load func
+- - - e.g.
+
+void tick_function_of_random_game_thing()
+{
+	// load a static mesh
+	SPoStaticMesh staticMesh;
+
+	if (NPoAssetBehavioir::LoadAsset(mpEngineInstanceToHoldAsset, staticMesh, mPoStaticMeshAssetPath, SPoStaticMesh::Type))
+	{
+		staticMesh... do stuff with it
+	}
+
+
+}
+
+struct SPoVulkanTexture
+
+struct SPoVulkanModel
+
+struct SPoVulkanShader
+
+struct SPoMaterial 
+
+
+
+Engine
+{
+	
+}
+

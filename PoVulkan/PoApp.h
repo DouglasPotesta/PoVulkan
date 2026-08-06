@@ -2,7 +2,7 @@
 
 #include "PoWindow.h"
 #include "PoVulkan.h"
-#include "PoVulkanSurface.h"
+#include "PoVulkanDevice.h"
 
 struct SPoAppSettings
 {

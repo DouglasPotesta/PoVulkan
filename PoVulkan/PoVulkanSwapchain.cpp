@@ -1,5 +1,5 @@
 #include "PoVulkanSwapchain.h"
-#include "PoVulkanSurface.h"
+#include "PoVulkanDevice.h"
 
 #include <stdexcept>
 #include <algorithm>
@@ -142,26 +142,26 @@ namespace NPoVulkanSwapchainPrivate
 	{
 		VkFormat colorFormat = format;
 
-		NPoVulkanSurfaceBehavior::create_image(outColorImage, outColorImageMemory, logicalDevice,
+		NPoVulkanDeviceBehavior::create_image(outColorImage, outColorImageMemory, logicalDevice,
 			extent.width, extent.height, 1, msaaSamples, format,
 			VK_IMAGE_TILING_OPTIMAL,
 			VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
 			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, memoryProperties);
-		outColorImageView = NPoVulkanSurfaceBehavior::create_image_view(logicalDevice, outColorImage, format, VK_IMAGE_ASPECT_COLOR_BIT, 1);
+		outColorImageView = NPoVulkanDeviceBehavior::create_image_view(logicalDevice, outColorImage, format, VK_IMAGE_ASPECT_COLOR_BIT, 1);
 	}
 
 	void create_depth_resources(VkImage &outDepthImage, VkDeviceMemory &outDepthImageMemory, VkImageView &outDepthImageView,
 		VkDevice logicalDevice, VkCommandPool commandPool, VkQueue graphicsQueue,
 		VkFormat const format, VkSampleCountFlagBits const msaaSamples, VkExtent2D const &extent, VkPhysicalDeviceMemoryProperties const &memoryProperties)
 	{
-		NPoVulkanSurfaceBehavior::create_image(outDepthImage, outDepthImageMemory, logicalDevice,
+		NPoVulkanDeviceBehavior::create_image(outDepthImage, outDepthImageMemory, logicalDevice,
 			extent.width, extent.height, 1, msaaSamples,
 			format, VK_IMAGE_TILING_OPTIMAL,
 			VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
 			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, memoryProperties);
-		outDepthImageView = NPoVulkanSurfaceBehavior::create_image_view(logicalDevice, outDepthImage, format, VK_IMAGE_ASPECT_DEPTH_BIT, 1);
+		outDepthImageView = NPoVulkanDeviceBehavior::create_image_view(logicalDevice, outDepthImage, format, VK_IMAGE_ASPECT_DEPTH_BIT, 1);
 
-		NPoVulkanSurfaceBehavior::transition_image_layout(logicalDevice, commandPool, graphicsQueue, outDepthImage, format, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, 1);
+		NPoVulkanDeviceBehavior::transition_image_layout(logicalDevice, commandPool, graphicsQueue, outDepthImage, format, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, 1);
 	}
 
 
@@ -215,7 +215,7 @@ SPoVulkanSwapchainState NPoVulkanSwapchainBehavior::init(SPoVulkanSwapchainResou
 	outResources.mSwapChainImageViews.resize(state.mImageCount);
 	for (size_t i = 0; i < state.mImageCount; ++i)
 	{
-		outResources.mSwapChainImageViews[i] = NPoVulkanSurfaceBehavior::create_image_view(device, outResources.mImages[i], surfaceFormat.format, VK_IMAGE_ASPECT_COLOR_BIT, 1);
+		outResources.mSwapChainImageViews[i] = NPoVulkanDeviceBehavior::create_image_view(device, outResources.mImages[i], surfaceFormat.format, VK_IMAGE_ASPECT_COLOR_BIT, 1);
 	}
 
 	create_color_resources(outResources.mColorImage, outResources.mColorImageMemory, outResources.mColorImageView, device,
