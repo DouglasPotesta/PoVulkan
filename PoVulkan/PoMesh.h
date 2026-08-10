@@ -65,13 +65,13 @@ namespace std
 
 struct SPoMeshSettings
 {
-	std::string mPath;
+	std::string mPath = "models/viking_room.obj";
 
 };
 
 struct SPoMeshState
 {
-	VkDevice mDevice;
+	VkDevice mDevice = VK_NULL_HANDLE;
 };
 
 struct SPoMeshResources
@@ -88,7 +88,7 @@ namespace NPoMeshBehavior
 {
 	SPoMeshState init(SPoMeshResources &outResources, SPoMeshSettings const settings,
 		VkDevice device, VkPhysicalDevice physicalDevice, VkCommandPool commandPool, VkQueue graphicsQueue,
-		VkMemoryPropertyFlags const properties, VkPhysicalDeviceMemoryProperties const &memoryProperties);
+		VkPhysicalDeviceMemoryProperties const &memoryProperties);
 
 	void cleanup(SPoMeshResources &inOutResources, SPoMeshState &inOutState, SPoMeshSettings const &settings);
 }

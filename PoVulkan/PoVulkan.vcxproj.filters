@@ -39,6 +39,15 @@
     <ClCompile Include="PoMesh.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="PoVulkanUniform.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PoVulkanShader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PoGameObject.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="PoWindow.h">
@@ -78,6 +87,18 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="PoMesh.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PoVulkanUniform.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PoVulkanShader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PoGameObject.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PoTransform.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

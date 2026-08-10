@@ -206,16 +206,16 @@ SPoVulkanSwapchainState NPoVulkanSwapchainBehavior::init(SPoVulkanSwapchainResou
 	state.mExtent = extent;
 	state.mPresentMode = choose_swap_present_mode(supportDetails.mPresentModes);
 
-	create_swap_chain(outResources.mSwapChain, state, supportDetails, indices, surfaceFormat);
+	create_swap_chain(outResources.mSwapchain, state, supportDetails, indices, surfaceFormat);
 	
-	vkGetSwapchainImagesKHR(device, outResources.mSwapChain, &(state.mImageCount), nullptr);
+	vkGetSwapchainImagesKHR(device, outResources.mSwapchain, &(state.mImageCount), nullptr);
 	outResources.mImages.resize(state.mImageCount);
-	vkGetSwapchainImagesKHR(device, outResources.mSwapChain, &(state.mImageCount), outResources.mImages.data());
+	vkGetSwapchainImagesKHR(device, outResources.mSwapchain, &(state.mImageCount), outResources.mImages.data());
 
-	outResources.mSwapChainImageViews.resize(state.mImageCount);
+	outResources.mSwapchainImageViews.resize(state.mImageCount);
 	for (size_t i = 0; i < state.mImageCount; ++i)
 	{
-		outResources.mSwapChainImageViews[i] = NPoVulkanDeviceBehavior::create_image_view(device, outResources.mImages[i], surfaceFormat.format, VK_IMAGE_ASPECT_COLOR_BIT, 1);
+		outResources.mSwapchainImageViews[i] = NPoVulkanDeviceBehavior::create_image_view(device, outResources.mImages[i], surfaceFormat.format, VK_IMAGE_ASPECT_COLOR_BIT, 1);
 	}
 
 	create_color_resources(outResources.mColorImage, outResources.mColorImageMemory, outResources.mColorImageView, device,
@@ -223,7 +223,7 @@ SPoVulkanSwapchainState NPoVulkanSwapchainBehavior::init(SPoVulkanSwapchainResou
 	create_depth_resources(outResources.mDepthImage, outResources.mDepthImageMemory, outResources.mDepthImageView, device, commandPool, graphicsQueue,
 		depthFormat, msaaCount, extent, memoryProperties);
 
-	create_frame_buffers(outResources.mFrameBuffers, device, outResources.mSwapChainImageViews, outResources.mColorImageView, outResources.mDepthImageView, renderPass, extent);
+	create_frame_buffers(outResources.mFrameBuffers, device, outResources.mSwapchainImageViews, outResources.mColorImageView, outResources.mDepthImageView, renderPass, extent);
     return state;
 }
 
@@ -243,11 +243,11 @@ void NPoVulkanSwapchainBehavior::cleanup(SPoVulkanSwapchainResources &inOutResou
 		vkDestroyFramebuffer(inOutState.mDevice, framebuffer, nullptr);
 	}
 
-	for (auto imageView : inOutResources.mSwapChainImageViews)
+	for (auto imageView : inOutResources.mSwapchainImageViews)
 	{
 		vkDestroyImageView(inOutState.mDevice, imageView, nullptr);
 	}
-	vkDestroySwapchainKHR(inOutState.mDevice, inOutResources.mSwapChain, nullptr);
+	vkDestroySwapchainKHR(inOutState.mDevice, inOutResources.mSwapchain, nullptr);
 	inOutResources = {};
 	inOutState = {};
 }

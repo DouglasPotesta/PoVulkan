@@ -2,7 +2,11 @@
 
 #include "PoGlfw.h"
 #include "PoVulkanSwapchain.h"
+#include "PoGameObject.h"
+#include "PoTexture.h"
+#include "PoMesh.h"
 
+#include <array>
 #include <vector>
 
 
@@ -13,6 +17,9 @@ struct SPoVulkanDeviceSettings
 	};
 
 	SPoVulkanSwapchainSettings mSwapchain;
+	std::array<SPoGameObjectSettings, NPoGameObjectBehavior::gk_max_game_objects> mGameObjects;
+	SPoTextureSettings mTexture;
+	SPoMeshSettings mMesh;
 };
 
 struct SPoVulkanDeviceState
@@ -34,6 +41,11 @@ struct SPoVulkanDeviceState
 	VkPhysicalDeviceMemoryProperties mMemoryProperties;
 	VkSurfaceFormatKHR mSurfaceFormat = {};
 	VkFormat mDepthFormat = {};
+	std::array<SPoGameObjectState, NPoGameObjectBehavior::gk_max_game_objects> mGameObjects;
+	SPoTextureState mTexture;
+	SPoMeshState mMesh;
+	int mCurrentFrame = 0;
+	bool mFramebufferResized = false;
 };
 
 struct SPoVulkanDeviceResources
@@ -46,6 +58,14 @@ struct SPoVulkanDeviceResources
 	VkPipelineLayout mPipelineLayout = VK_NULL_HANDLE;
 	VkPipeline mGraphicsPipeline = VK_NULL_HANDLE;
 	VkCommandPool mCommandPool = VK_NULL_HANDLE;
+	VkDescriptorPool mDescriptorPool = VK_NULL_HANDLE;
+	std::array<SPoGameObjectResources, NPoGameObjectBehavior::gk_max_game_objects> mGameObjects;
+	SPoTextureResources mTexture;
+	std::vector<VkCommandBuffer> mCommandBuffers;
+	std::vector<VkSemaphore> mImageAvailableSemaphores;
+	std::vector<VkSemaphore> mRenderFinishedSemaphores;
+	std::vector<VkFence> mInFlightFences;
+	SPoMeshResources mMesh;
 };
 
 namespace NPoVulkanDeviceBehavior
@@ -66,4 +86,7 @@ namespace NPoVulkanDeviceBehavior
 
 	SPoVulkanDeviceState init(SPoVulkanDeviceResources &outResources, SPoVulkanDeviceSettings const &settings, VkInstance instance, GLFWwindow *pWindow);
 	void cleanup(SPoVulkanDeviceResources &inOutResources, SPoVulkanDeviceState &inOutState, SPoVulkanDeviceSettings const &settings);
+
+	void draw_frame(SPoVulkanDeviceResources &inOutResources, SPoVulkanDeviceState &inOutState, SPoVulkanDeviceSettings const &settings);
+	void recreate_swap_chains_for_resize(SPoVulkanDeviceResources &inOutResources, SPoVulkanDeviceState &inOutState, SPoVulkanDeviceSettings const &settings);
 }

@@ -7,7 +7,7 @@
 #define TINYOBJLOADER_IMPLEMENTATION
 #include <tiny_obj_loader.h>
 
-
+// TODO : I am thinking I might want to rename these as PoVulkanMeshses since they are very specific to vulkan implementation
 
 namespace std
 {
@@ -62,10 +62,10 @@ namespace NPoMeshPrivate
 
 SPoMeshState NPoMeshBehavior::init(SPoMeshResources &outResources, SPoMeshSettings const settings,
 	VkDevice device, VkPhysicalDevice physicalDevice, VkCommandPool commandPool, VkQueue graphicsQueue,
-	VkMemoryPropertyFlags const properties, VkPhysicalDeviceMemoryProperties const &memoryProperties)
+	VkPhysicalDeviceMemoryProperties const &memoryProperties)
 {
     SPoMeshState state = {};
-
+	state.mDevice = device;
 	NPoMeshPrivate::load_model(outResources.mVertices, outResources.mIndices, settings);
 
 	VkDeviceSize vertexBufferSize = sizeof(outResources.mVertices[0]) * outResources.mVertices.size();
@@ -81,7 +81,7 @@ SPoMeshState NPoMeshBehavior::init(SPoMeshResources &outResources, SPoMeshSettin
 	memcpy(data, outResources.mVertices.data(), (size_t)vertexBufferSize);
 	vkUnmapMemory(device, stagingBufferMemory);
 
-	NPoVulkanDeviceBehavior::create_buffer(stagingBuffer, stagingBufferMemory,
+	NPoVulkanDeviceBehavior::create_buffer(outResources.mVertexBuffer, outResources.mVertexBufferMemory,
 		device, vertexBufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
 		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, memoryProperties);
 
@@ -122,5 +122,3 @@ void NPoMeshBehavior::cleanup(SPoMeshResources &inOutResources, SPoMeshState &in
     inOutResources = {};
     inOutState = {};
 }
-
-

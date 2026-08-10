@@ -5,6 +5,7 @@
 #include <string>
 
 // TODO : I am thinking I might want to rename these as PoVulkanTextures since they are very specific to vulkan implementation
+// the instinct is that game code will probably just want to have an opaque texture
 
 // TODO : Move this to its own header file
 enum class EPoMipmapCreationType : uint8_t
@@ -16,8 +17,8 @@ enum class EPoMipmapCreationType : uint8_t
 
 struct SPoTextureSettings
 {
-	std::string mPath;
-	EPoMipmapCreationType  mMipMapCreationType = EPoMipmapCreationType::None;
+	std::string mPath = "textures/viking_room.png";
+	EPoMipmapCreationType  mMipMapCreationType = EPoMipmapCreationType::Max;
 };
 
 struct SPoTextureState
@@ -44,8 +45,8 @@ namespace NPoTextureBehavior
 	VkSampler create_texture_sampler(VkDevice device, VkPhysicalDevice physicalDevice);
 
 	SPoTextureState init(SPoTextureResources &outResources, SPoTextureSettings const &settings,
-		VkDevice device, VkPhysicalDevice physicalDevice, VkBuffer stagingBuffer, VkDeviceMemory stagingBufferMemory, VkCommandPool commandPool, VkQueue graphicsQueue,
-		VkBufferUsageFlags const usage, VkMemoryPropertyFlags const properties, VkPhysicalDeviceMemoryProperties const &memoryProperties); 
+		VkDevice device, VkPhysicalDevice physicalDevice, VkCommandPool commandPool, VkQueue graphicsQueue,
+		VkPhysicalDeviceMemoryProperties const &memoryProperties); 
 
 	void cleanup(SPoTextureResources &inOutResources, SPoTextureState &inOutState, SPoTextureSettings const &settings);
 }

@@ -46,8 +46,8 @@ VkSampler NPoTextureBehavior::create_texture_sampler(VkDevice device, VkPhysical
 
 
 SPoTextureState NPoTextureBehavior::init(SPoTextureResources &outResources, SPoTextureSettings const &settings, 
-    VkDevice device, VkPhysicalDevice physicalDevice, VkBuffer stagingBuffer, VkDeviceMemory stagingBufferMemory, VkCommandPool commandPool, VkQueue graphicsQueue,
-    VkBufferUsageFlags const usage, VkMemoryPropertyFlags const properties, VkPhysicalDeviceMemoryProperties const &memoryProperties)
+    VkDevice device, VkPhysicalDevice physicalDevice, VkCommandPool commandPool, VkQueue graphicsQueue,
+    VkPhysicalDeviceMemoryProperties const &memoryProperties)
 {
     SPoTextureState state;
     state.mDevice = device;
@@ -63,7 +63,7 @@ SPoTextureState NPoTextureBehavior::init(SPoTextureResources &outResources, SPoT
     switch (settings.mMipMapCreationType)
     {
     case EPoMipmapCreationType::None:
-        state.mMipLevels = 0;
+        state.mMipLevels = 1;
         break;
     case EPoMipmapCreationType::Max:
         state.mMipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(state.mWidth, state.mHeight)))) + 1;
@@ -73,7 +73,8 @@ SPoTextureState NPoTextureBehavior::init(SPoTextureResources &outResources, SPoT
         break;
     }
     static VkFormat const skImageFormat = VK_FORMAT_R8G8B8A8_SRGB;
-    
+    VkBuffer stagingBuffer;
+    VkDeviceMemory stagingBufferMemory;
     NPoVulkanDeviceBehavior::create_buffer(stagingBuffer, stagingBufferMemory, 
         device, state.mImageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
         memoryProperties);

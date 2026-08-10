@@ -638,12 +638,144 @@ namespace NPoVulkanDevicePrivate
 	{
 		return format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT;
 	}
-	/* TODO : Add these
-	createUniformBuffer(inOutResources);
-	createDescriptorPool(inOutResources);
-	createDescriptorSets(inOutResources);
-	createCommandBuffers(inOutResources);
-	createSyncObjects(inOutResources);*/
+
+	void create_descriptor_pool(VkDescriptorPool &outDescriptorPool, VkDevice device, int const descriptorCount)
+	{
+		std::array<VkDescriptorPoolSize, 2> poolSizes{};
+		poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		poolSizes[0].descriptorCount = static_cast<uint32_t>(descriptorCount);
+		poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		poolSizes[1].descriptorCount = static_cast<uint32_t>(descriptorCount);
+		VkDescriptorPoolCreateInfo poolInfo{};
+		poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+		poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
+		poolInfo.pPoolSizes = poolSizes.data();
+		poolInfo.maxSets = static_cast<uint32_t>(descriptorCount);
+
+		if (vkCreateDescriptorPool(device, &poolInfo, nullptr, &outDescriptorPool) != VK_SUCCESS)
+		{
+			throw std::runtime_error("failed to create descriptor pool!");
+		}
+	}
+
+	void create_command_buffers(std::vector<VkCommandBuffer> &outCommandBuffers, VkDevice device, VkCommandPool commandPool, int const imageCount)
+	{
+		outCommandBuffers.resize(imageCount);
+		VkCommandBufferAllocateInfo allocInfo{};
+		allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+		allocInfo.commandPool = commandPool;
+		allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+		allocInfo.commandBufferCount = (uint32_t)outCommandBuffers.size();
+
+		if (vkAllocateCommandBuffers(device, &allocInfo, outCommandBuffers.data()) != VK_SUCCESS)
+		{
+			throw std::runtime_error("failed to allocate command buffers!");
+		}
+	}
+
+
+	void create_sync_objects(std::vector<VkSemaphore> &outImageAvailableSemaphores, std::vector<VkSemaphore> &outRenderFinishedSemaphores, std::vector<VkFence> &outInFlightFences, VkDevice device, int const imageCount)
+	{
+		outImageAvailableSemaphores.resize(imageCount);
+		outRenderFinishedSemaphores.resize(imageCount);
+		outInFlightFences.resize(imageCount);
+
+		VkSemaphoreCreateInfo semaphoreInfo{};
+		semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+		VkFenceCreateInfo fenceInfo{};
+		fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+		fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+		for (size_t i = 0; i < imageCount; ++i)
+		{
+			if (vkCreateSemaphore(device, &semaphoreInfo, nullptr, &outImageAvailableSemaphores[i]) != VK_SUCCESS ||
+				vkCreateSemaphore(device, &semaphoreInfo, nullptr, &outRenderFinishedSemaphores[i]) != VK_SUCCESS ||
+				vkCreateFence(device, &fenceInfo, nullptr, &outInFlightFences[i]) != VK_SUCCESS)
+			{
+				throw std::runtime_error("failed to create semaphores!");
+			}
+		}
+	}
+
+	// feel like this should be called create render objects then make the vulkan game objects which will make their respective
+	// uniform buffers and descriptor sets
+	
+
+	/* TODO : replace these
+	(x) createUniformBuffer(inOutResources); => being done via game objects though would like to move it back over here
+	(x) createDescriptorSets(inOutResources); => being done via game objects though would like to move it back over here
+	(x) createCommandBuffers(inOutResources);*/
+
+
+	void record_command_buffer(VkCommandBuffer commandBuffer, int imageIndex, int currentFrame,
+		VkRenderPass renderPass, std::vector<VkFramebuffer> const &swapChainFramebuffers, VkExtent2D const &swapChainExtent,
+		VkPipeline graphicsPipeline, VkPipelineLayout pipelineLayout, SPoMeshResources const &meshResources, 
+		std::array<SPoGameObjectResources, NPoGameObjectBehavior::gk_max_game_objects> &gameObjectsResources,
+		std::array<SPoGameObjectState, NPoGameObjectBehavior::gk_max_game_objects> &gameObjectsState)
+	{
+		VkCommandBufferBeginInfo beginInfo{};
+		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+		beginInfo.flags = 0;
+		beginInfo.pInheritanceInfo = nullptr;
+
+		if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS)
+		{
+			throw std::runtime_error("failed to begin recording command buffer!");
+		}
+
+		VkRenderPassBeginInfo renderPassInfo{};
+		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+		renderPassInfo.renderPass = renderPass;
+		renderPassInfo.framebuffer = swapChainFramebuffers[imageIndex];
+		renderPassInfo.renderArea.offset = { 0, 0 };
+		renderPassInfo.renderArea.extent = swapChainExtent;
+
+		std::array<VkClearValue, 2> clearValues{};
+		clearValues[0].color = { {0.0f, 0.0f, 0.0f, 1.0f} };
+		clearValues[1].depthStencil = { 1.0f, 0 };
+
+		renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
+		renderPassInfo.pClearValues = clearValues.data();
+
+		vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+		vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
+
+		VkBuffer vertexBuffers[] = { meshResources.mVertexBuffer };
+		VkDeviceSize offsets[] = { 0 };
+		vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
+
+		vkCmdBindIndexBuffer(commandBuffer, meshResources.mIndexBuffer, 0, VK_INDEX_TYPE_UINT32);
+
+		VkViewport viewport{};
+		viewport.x = 0.0f;
+		viewport.y = 0.0f;
+		viewport.width = static_cast<float>(swapChainExtent.width);
+		viewport.height = static_cast<float>(swapChainExtent.height);
+		viewport.minDepth = 0.0f;
+		viewport.maxDepth = 1.0f;
+		vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
+
+		VkRect2D scissor{};
+		scissor.offset = { 0, 0 };
+		scissor.extent = swapChainExtent;
+		vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+		for (int i = 0; i < NPoGameObjectBehavior::gk_max_game_objects; ++i)
+		{
+			
+			vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &(gameObjectsResources[i].mDescriptorSets[currentFrame]), 0, nullptr);
+			vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(meshResources.mIndices.size()), 1, 0, 0, 0);
+		}
+
+		vkCmdEndRenderPass(commandBuffer);
+
+		if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS)
+		{
+			throw std::runtime_error("failed to record command buffer!");
+		}
+
+	}
 }
 
 void NPoVulkanDeviceBehavior::transition_image_layout(VkDevice device, VkCommandPool commandPool, VkQueue graphicsQueue, VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipLevels)
@@ -1008,23 +1140,179 @@ SPoVulkanDeviceState NPoVulkanDeviceBehavior::init(SPoVulkanDeviceResources &out
 	create_render_pass(outResources.mRenderPass, outResources.mLogicalDevice, state.mMsaaCount, state.mSurfaceFormat.format, state.mDepthFormat);
 	create_descriptor_set_layout(outResources.mDescriptorSetLayout, outResources.mLogicalDevice);
 	create_graphics_pipeline(outResources.mPipelineLayout, outResources.mGraphicsPipeline, outResources.mLogicalDevice, outResources.mDescriptorSetLayout, outResources.mRenderPass, state.mSwapchain.mExtent, state.mMsaaCount);
-
 	state.mSwapchain = NPoVulkanSwapchainBehavior::init(outResources.mSwapchain, outResources.mSurface, outResources.mLogicalDevice, outResources.mCommandPool, state.mGraphicsQueue, outResources.mRenderPass,
 		settings.mSwapchain, state.mSwapchainSupportDetails, state.mQueueFamilyIndices, extent, state.mSurfaceFormat, state.mDepthFormat, state.mMsaaCount, state.mMemoryProperties);
+	create_descriptor_pool(outResources.mDescriptorPool, outResources.mLogicalDevice, state.mSwapchain.mImageCount * NPoGameObjectBehavior::gk_max_game_objects);
+	std::vector<VkDescriptorSetLayout> layouts(state.mSwapchain.mImageCount, outResources.mDescriptorSetLayout);
+	VkDescriptorSetAllocateInfo allocInfo{};
+	allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+	allocInfo.descriptorPool = outResources.mDescriptorPool;
+	allocInfo.descriptorSetCount = static_cast<uint32_t>(layouts.size());
+	allocInfo.pSetLayouts = layouts.data();
 
+	state.mTexture = NPoTextureBehavior::init(outResources.mTexture, settings.mTexture,
+		outResources.mLogicalDevice, state.mPhysicalDevice, outResources.mCommandPool, state.mGraphicsQueue, state.mMemoryProperties);
+	state.mMesh =  NPoMeshBehavior::init(outResources.mMesh, settings.mMesh, outResources.mLogicalDevice, state.mPhysicalDevice, outResources.mCommandPool,
+		state.mGraphicsQueue, state.mMemoryProperties);
+	
+	// hard coded game objects not a big deal for now we'll figure out the structure later
+	// TODO : Figure out the structure
+	for (int i = 0; i < state.mGameObjects.size(); ++i)
+	{
+		state.mGameObjects[i] = NPoGameObjectBehavior::init(outResources.mGameObjects[i], settings.mGameObjects[i],
+			outResources.mLogicalDevice, outResources.mTexture.mImageView, outResources.mTexture.mSampler, 
+			layouts, outResources.mDescriptorPool, state.mMemoryProperties, state.mSwapchain.mImageCount);
+	}
+
+	create_command_buffers(outResources.mCommandBuffers, outResources.mLogicalDevice, outResources.mCommandPool, state.mSwapchain.mImageCount);
+
+	create_sync_objects(outResources.mImageAvailableSemaphores, outResources.mRenderFinishedSemaphores, outResources.mInFlightFences, outResources.mLogicalDevice, state.mSwapchain.mImageCount);
 	return state;
 }
 
 void NPoVulkanDeviceBehavior::cleanup(SPoVulkanDeviceResources &inOutResources, SPoVulkanDeviceState &inOutState, SPoVulkanDeviceSettings const &settings)
 {
+	int const imageCount = inOutState.mSwapchain.mImageCount;
+	for (int i = 0; i < inOutState.mGameObjects.size(); ++i)
+	{
+		 NPoGameObjectBehavior::cleanup(inOutResources.mGameObjects[i], inOutState.mGameObjects[i], settings.mGameObjects[i]);
+	}
+
+	NPoMeshBehavior::cleanup(inOutResources.mMesh, inOutState.mMesh, settings.mMesh);
+
+	NPoTextureBehavior::cleanup(inOutResources.mTexture, inOutState.mTexture, settings.mTexture);
+
 	NPoVulkanSwapchainBehavior::cleanup(inOutResources.mSwapchain, inOutState.mSwapchain, settings.mSwapchain);
+
+	vkDestroyDescriptorPool(inOutResources.mLogicalDevice, inOutResources.mDescriptorPool, nullptr);
 
 	vkDestroyDescriptorSetLayout(inOutResources.mLogicalDevice, inOutResources.mDescriptorSetLayout, nullptr);
 
 	vkDestroyPipeline(inOutResources.mLogicalDevice, inOutResources.mGraphicsPipeline, nullptr);
 	vkDestroyPipelineLayout(inOutResources.mLogicalDevice, inOutResources.mPipelineLayout, nullptr);
 	vkDestroyRenderPass(inOutResources.mLogicalDevice, inOutResources.mRenderPass, nullptr);
+
+
+	for (size_t i = 0; i < imageCount; ++i)
+	{
+		vkDestroySemaphore(inOutResources.mLogicalDevice, inOutResources.mImageAvailableSemaphores[i], nullptr);
+		vkDestroySemaphore(inOutResources.mLogicalDevice, inOutResources.mRenderFinishedSemaphores[i], nullptr);
+		vkDestroyFence(inOutResources.mLogicalDevice, inOutResources.mInFlightFences[i], nullptr);
+	}
+
 	vkDestroyCommandPool(inOutResources.mLogicalDevice, inOutResources.mCommandPool, nullptr);
 	vkDestroyDevice(inOutResources.mLogicalDevice, nullptr);
 	vkDestroySurfaceKHR(inOutState.mInstance, inOutResources.mSurface, nullptr);
+}
+
+
+
+void NPoVulkanDeviceBehavior::draw_frame(SPoVulkanDeviceResources &inOutResources, SPoVulkanDeviceState &inOutState, SPoVulkanDeviceSettings const &settings)
+{
+	using namespace NPoVulkanDevicePrivate;
+	int const imageCount = inOutState.mSwapchain.mImageCount;
+	int &currentFrame = inOutState.mCurrentFrame;
+	VkDevice device = inOutResources.mLogicalDevice;
+	vkWaitForFences(inOutResources.mLogicalDevice, 1, &inOutResources.mInFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
+
+
+	uint32_t imageIndex;
+	VkResult result = vkAcquireNextImageKHR(device, inOutResources.mSwapchain.mSwapchain, UINT64_MAX, inOutResources.mImageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
+
+	if (result == VK_ERROR_OUT_OF_DATE_KHR)
+	{
+		recreate_swap_chains_for_resize(inOutResources, inOutState, settings);
+		return;
+	}
+	else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
+	{
+		throw std::runtime_error("failed to acquire swap chain image!");
+	}
+
+	vkResetFences(device, 1, &inOutResources.mInFlightFences[currentFrame]);
+
+	vkResetCommandBuffer(inOutResources.mCommandBuffers[currentFrame], 0);
+
+	record_command_buffer(inOutResources.mCommandBuffers[currentFrame], imageIndex, currentFrame,
+		inOutResources.mRenderPass, inOutResources.mSwapchain.mFrameBuffers, inOutState.mSwapchain.mExtent,
+		inOutResources.mGraphicsPipeline, inOutResources.mPipelineLayout, inOutResources.mMesh,
+		inOutResources.mGameObjects, inOutState.mGameObjects);
+
+
+	glm::mat4 view = glm::lookAt(glm::vec3(0.0f, 2.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+
+	glm::mat4 projection = glm::perspective(glm::radians(45.0f), inOutState.mSwapchain.mExtent.width / (float)inOutState.mSwapchain.mExtent.height, 0.1f, 10.0f);
+	projection[1][1] *= -1.0;
+	for (int i = 0; i < NPoGameObjectBehavior::gk_max_game_objects; ++i)
+	{
+		NPoGameObjectBehavior::update_uniform_buffers(inOutResources.mGameObjects[i], inOutState.mGameObjects[i], settings.mGameObjects[i], currentFrame, view, projection);
+	}
+
+	VkSubmitInfo submitInfo{};
+	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+	VkSemaphore waitSemaphores[] = { inOutResources.mImageAvailableSemaphores[currentFrame] };
+	VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+	submitInfo.waitSemaphoreCount = 1;
+	submitInfo.pWaitSemaphores = waitSemaphores;
+	submitInfo.pWaitDstStageMask = waitStages;
+
+	submitInfo.commandBufferCount = 1;
+	submitInfo.pCommandBuffers = &inOutResources.mCommandBuffers[currentFrame];
+
+	VkSemaphore signalSemaphores[] = { inOutResources.mRenderFinishedSemaphores[currentFrame] };
+	submitInfo.signalSemaphoreCount = 1;
+	submitInfo.pSignalSemaphores = signalSemaphores;
+
+	if (vkQueueSubmit(inOutState.mGraphicsQueue, 1, &submitInfo, inOutResources.mInFlightFences[currentFrame]) != VK_SUCCESS)
+	{
+		throw std::runtime_error("failed to submit draw command buffer!");
+	}
+
+	VkPresentInfoKHR presentInfo{};
+	presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+	presentInfo.waitSemaphoreCount = 1;
+	presentInfo.pWaitSemaphores = signalSemaphores;
+
+	VkSwapchainKHR swapChains[] = { inOutResources.mSwapchain.mSwapchain };
+	presentInfo.swapchainCount = 1;
+	presentInfo.pSwapchains = swapChains;
+	presentInfo.pImageIndices = &imageIndex;
+	presentInfo.pResults = nullptr;
+
+	result = vkQueuePresentKHR(inOutState.mPresentQueue, &presentInfo);
+
+	if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || inOutState.mFramebufferResized)
+	{
+		inOutState.mFramebufferResized = false;
+		recreate_swap_chains_for_resize(inOutResources, inOutState, settings);
+	}
+	else if (result != VK_SUCCESS)
+	{
+		throw std::runtime_error("failed to present swap chain image!");
+	}
+
+	inOutState.mCurrentFrame = (inOutState.mCurrentFrame + 1) % imageCount;
+}
+
+
+void NPoVulkanDeviceBehavior::recreate_swap_chains_for_resize(SPoVulkanDeviceResources &inOutResources, SPoVulkanDeviceState &inOutState, SPoVulkanDeviceSettings const &settings)
+{
+	int width = 0, height = 0;
+	glfwGetFramebufferSize(inOutState.mpWindow, &width, &height);
+
+	while (width == 0 || height == 0)
+	{
+		glfwGetFramebufferSize(inOutState.mpWindow, &width, &height);
+		glfwWaitEvents();
+	}
+	vkDeviceWaitIdle(inOutResources.mLogicalDevice);
+
+	NPoVulkanSwapchainBehavior::cleanup(inOutResources.mSwapchain, inOutState.mSwapchain, settings.mSwapchain);
+
+	VkExtent2D const &extent = NPoVulkanSwapchainBehavior::choose_swap_extent(inOutState.mpWindow, inOutState.mSwapchainSupportDetails.mCapabilities);
+	inOutState.mSwapchain = NPoVulkanSwapchainBehavior::init(
+		inOutResources.mSwapchain, inOutResources.mSurface, inOutResources.mLogicalDevice, inOutResources.mCommandPool, inOutState.mGraphicsQueue, inOutResources.mRenderPass,
+		settings.mSwapchain, inOutState.mSwapchainSupportDetails, inOutState.mQueueFamilyIndices,
+		extent, inOutState.mSurfaceFormat, inOutState.mDepthFormat, inOutState.mMsaaCount, inOutState.mMemoryProperties);
 }

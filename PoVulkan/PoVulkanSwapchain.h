@@ -44,9 +44,9 @@ struct SPoVulkanSwapchainState
 
 struct SPoVulkanSwapchainResources
 {
-	VkSwapchainKHR mSwapChain = VK_NULL_HANDLE;
+	VkSwapchainKHR mSwapchain = VK_NULL_HANDLE;
 	std::vector<VkImage> mImages;
-	std::vector<VkImageView> mSwapChainImageViews;
+	std::vector<VkImageView> mSwapchainImageViews;
 	VkImage mColorImage = VK_NULL_HANDLE;
 	VkDeviceMemory mColorImageMemory = VK_NULL_HANDLE;
 	VkImageView mColorImageView = VK_NULL_HANDLE;
