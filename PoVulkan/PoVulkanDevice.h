@@ -5,10 +5,63 @@
 #include "PoGameObject.h"
 #include "PoTexture.h"
 #include "PoMesh.h"
+#include "PoWindow.h"
 
 #include <array>
 #include <vector>
 
+
+struct SPoWindowResizeCommand
+{
+	struct SPoVulkanDeviceSettings *mpSettings = nullptr;
+	struct SPoVulkanDeviceResources *mpResources = nullptr;
+	struct SPoVulkanDeviceState *mpState = nullptr;
+};
+
+struct SPoWindowId
+{
+	int mId = -1;
+
+	static int sUniqueIdSeed;
+	bool operator==(SPoWindowId const &other) { return other.mId == mId; }
+};
+
+struct SPoVulkanWindowSettings
+{
+	SPoWindowSettings mWindow;
+	SPoVulkanSwapchainSettings mSwapchain;
+	std::array<SPoGameObjectSettings, NPoGameObjectBehavior::gk_max_game_objects> mGameObjects;
+
+};
+
+struct SPoVulkanWindowState
+{
+	SPoWindowState mWindow;
+	GLFWwindow *mpWindow = nullptr;
+	std::array<SPoGameObjectState, NPoGameObjectBehavior::gk_max_game_objects> mGameObjects;
+	SPoVulkanSwapchainState mSwapchain;
+	int mCurrentFrame = 0;
+	bool mFramebufferResized = false;
+	SPoWindowId mUniqueId = {};
+};
+
+struct SPoVulkanWindowResources
+{
+	SPoWindowResources mWindow;
+	VkSurfaceKHR mSurface = VK_NULL_HANDLE;
+	SPoVulkanSwapchainResources mSwapchain;
+	VkRenderPass mRenderPass = VK_NULL_HANDLE;
+	VkDescriptorSetLayout mDescriptorSetLayout = VK_NULL_HANDLE;
+	VkPipelineLayout mPipelineLayout = VK_NULL_HANDLE;
+	VkPipeline mGraphicsPipeline = VK_NULL_HANDLE;
+	VkCommandPool mCommandPool = VK_NULL_HANDLE;
+	VkDescriptorPool mDescriptorPool = VK_NULL_HANDLE;
+	std::vector<VkCommandBuffer> mCommandBuffers;
+	std::vector<VkSemaphore> mImageAvailableSemaphores;
+	std::vector<VkSemaphore> mRenderFinishedSemaphores;
+	std::vector<VkFence> mInFlightFences;
+	std::array<SPoGameObjectResources, NPoGameObjectBehavior::gk_max_game_objects> mGameObjects;
+};
 
 struct SPoVulkanDeviceSettings
 {
@@ -18,14 +71,16 @@ struct SPoVulkanDeviceSettings
 
 	SPoVulkanSwapchainSettings mSwapchain;
 	std::array<SPoGameObjectSettings, NPoGameObjectBehavior::gk_max_game_objects> mGameObjects;
+
 	SPoTextureSettings mTexture;
 	SPoMeshSettings mMesh;
+
+	SPoVulkanWindowSettings mWindowsSettings;
 };
 
 struct SPoVulkanDeviceState
 {
 	VkInstance mInstance = VK_NULL_HANDLE;
-	GLFWwindow *mpWindow = nullptr;
 
 	VkPhysicalDevice mPhysicalDevice = VK_NULL_HANDLE;
 	SQueueFamilyIndices mQueueFamilyIndices = {};
@@ -33,25 +88,32 @@ struct SPoVulkanDeviceState
 	// note this is managed by the logical device
 	VkQueue mGraphicsQueue;
 	// note this is managed by the logical device
-	VkQueue mPresentQueue;
 
+	GLFWwindow *mpWindow = nullptr;
+	VkQueue mPresentQueue;
+	std::array<SPoGameObjectState, NPoGameObjectBehavior::gk_max_game_objects> mGameObjects;
 	SPoVulkanSwapchainState mSwapchain;
+	int mCurrentFrame = 0;
+	bool mFramebufferResized = false;
+	std::vector<SPoVulkanWindowState> mWindowStateVector;
+
 
 	VkSampleCountFlagBits mMsaaCount = VK_SAMPLE_COUNT_1_BIT;
 	VkPhysicalDeviceMemoryProperties mMemoryProperties;
 	VkSurfaceFormatKHR mSurfaceFormat = {};
 	VkFormat mDepthFormat = {};
-	std::array<SPoGameObjectState, NPoGameObjectBehavior::gk_max_game_objects> mGameObjects;
 	SPoTextureState mTexture;
 	SPoMeshState mMesh;
-	int mCurrentFrame = 0;
-	bool mFramebufferResized = false;
 };
 
 struct SPoVulkanDeviceResources
 {
-	VkSurfaceKHR mSurface = VK_NULL_HANDLE;
 	VkDevice mLogicalDevice = VK_NULL_HANDLE;
+	SPoTextureResources mTexture;
+	SPoMeshResources mMesh;
+
+	std::array<SPoGameObjectResources, NPoGameObjectBehavior::gk_max_game_objects> mGameObjects;
+	VkSurfaceKHR mSurface = VK_NULL_HANDLE;
 	SPoVulkanSwapchainResources mSwapchain;
 	VkRenderPass mRenderPass = VK_NULL_HANDLE;
 	VkDescriptorSetLayout mDescriptorSetLayout = VK_NULL_HANDLE;
@@ -59,13 +121,11 @@ struct SPoVulkanDeviceResources
 	VkPipeline mGraphicsPipeline = VK_NULL_HANDLE;
 	VkCommandPool mCommandPool = VK_NULL_HANDLE;
 	VkDescriptorPool mDescriptorPool = VK_NULL_HANDLE;
-	std::array<SPoGameObjectResources, NPoGameObjectBehavior::gk_max_game_objects> mGameObjects;
-	SPoTextureResources mTexture;
 	std::vector<VkCommandBuffer> mCommandBuffers;
 	std::vector<VkSemaphore> mImageAvailableSemaphores;
 	std::vector<VkSemaphore> mRenderFinishedSemaphores;
 	std::vector<VkFence> mInFlightFences;
-	SPoMeshResources mMesh;
+	std::vector<SPoVulkanWindowResources> mWindowResourcesVector;
 };
 
 namespace NPoVulkanDeviceBehavior
@@ -89,4 +149,8 @@ namespace NPoVulkanDeviceBehavior
 
 	void draw_frame(SPoVulkanDeviceResources &inOutResources, SPoVulkanDeviceState &inOutState, SPoVulkanDeviceSettings const &settings);
 	void recreate_swap_chains_for_resize(SPoVulkanDeviceResources &inOutResources, SPoVulkanDeviceState &inOutState, SPoVulkanDeviceSettings const &settings);
+
+	SPoWindowId add_window(SPoVulkanDeviceResources &inOutResources, SPoVulkanDeviceState &inOutState, SPoVulkanDeviceSettings const &settings);
+	void close_window(SPoVulkanDeviceResources &inOutResources, SPoVulkanDeviceState &inOutState, SPoVulkanDeviceSettings const &settings, SPoWindowId const windowId);
+	void draw_window_frames(SPoVulkanDeviceResources &inOutResources, SPoVulkanDeviceState &inOutState, SPoVulkanDeviceSettings const &settings);
 }

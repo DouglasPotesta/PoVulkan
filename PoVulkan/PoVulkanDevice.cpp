@@ -29,7 +29,7 @@
 */
 
 
-
+int SPoWindowId::sUniqueIdSeed = 0;
 
 namespace NPoVulkanDevicePrivate
 {
@@ -1118,6 +1118,15 @@ void NPoVulkanDeviceBehavior::copy_buffer(VkBuffer dstBuffer, VkBuffer srcBuffer
 	end_single_time_commands(commandBuffer, device, commandPool, graphicsQueue);
 }
 
+static void framebufferResizeCallback(GLFWwindow *pWindow, int width, int height)
+{
+	if (void *pPointer = glfwGetWindowUserPointer(pWindow))
+	{
+		SPoWindowResizeCommand &command = *reinterpret_cast<SPoWindowResizeCommand *>(pPointer);
+		command.mpState->mFramebufferResized = true;
+	}
+}
+
 SPoVulkanDeviceState NPoVulkanDeviceBehavior::init(SPoVulkanDeviceResources &outResources, SPoVulkanDeviceSettings const &settings, VkInstance instance, GLFWwindow *pWindow)
 {
 	using namespace NPoVulkanDevicePrivate;
@@ -1133,6 +1142,8 @@ SPoVulkanDeviceState NPoVulkanDeviceBehavior::init(SPoVulkanDeviceResources &out
 	state.mSwapchainSupportDetails = NPoVulkanSwapchainBehavior::query_swap_chain_support(outResources.mSurface, state.mPhysicalDevice);
 	state.mSurfaceFormat = NPoVulkanSwapchainBehavior::choose_swap_surface_format(state.mSwapchainSupportDetails.mFormats);
 	state.mDepthFormat = find_depth_format(state.mPhysicalDevice);
+
+	glfwSetFramebufferSizeCallback(pWindow, framebufferResizeCallback);
 
 	create_logical_device(outResources.mLogicalDevice, state, settings, state.mQueueFamilyIndices);
 	create_command_pool(outResources.mCommandPool, outResources.mLogicalDevice, state.mQueueFamilyIndices);
@@ -1315,4 +1326,195 @@ void NPoVulkanDeviceBehavior::recreate_swap_chains_for_resize(SPoVulkanDeviceRes
 		inOutResources.mSwapchain, inOutResources.mSurface, inOutResources.mLogicalDevice, inOutResources.mCommandPool, inOutState.mGraphicsQueue, inOutResources.mRenderPass,
 		settings.mSwapchain, inOutState.mSwapchainSupportDetails, inOutState.mQueueFamilyIndices,
 		extent, inOutState.mSurfaceFormat, inOutState.mDepthFormat, inOutState.mMsaaCount, inOutState.mMemoryProperties);
+}
+
+SPoWindowId NPoVulkanDeviceBehavior::add_window(SPoVulkanDeviceResources &inOutResources, SPoVulkanDeviceState &inOutState, SPoVulkanDeviceSettings const &settings)
+{
+	using namespace NPoVulkanDevicePrivate;
+	SPoVulkanWindowSettings const &windowSettings = settings.mWindowsSettings;
+	SPoVulkanWindowState &windowState = inOutState.mWindowStateVector.emplace_back();
+	SPoVulkanWindowResources &windowResources = inOutResources.mWindowResourcesVector.emplace_back();
+	SPoVulkanDeviceState const &state = inOutState;
+	SPoWindowId::sUniqueIdSeed = (SPoWindowId::sUniqueIdSeed + 1);
+	windowState.mUniqueId = { SPoWindowId::sUniqueIdSeed };
+	windowState.mWindow = NPoWindowBehavior::init(windowResources.mWindow, windowSettings.mWindow);
+	GLFWwindow *pWindow = windowResources.mWindow.mpWindow;
+
+	glfwSetFramebufferSizeCallback(pWindow, framebufferResizeCallback);
+	create_surface(windowResources.mSurface, inOutState.mInstance, pWindow);
+
+	create_command_pool(windowResources.mCommandPool, inOutResources.mLogicalDevice, state.mQueueFamilyIndices);
+	VkExtent2D extent = NPoVulkanSwapchainBehavior::choose_swap_extent(pWindow, state.mSwapchainSupportDetails.mCapabilities);
+	create_render_pass(windowResources.mRenderPass, inOutResources.mLogicalDevice, state.mMsaaCount, state.mSurfaceFormat.format, state.mDepthFormat);
+	create_descriptor_set_layout(windowResources.mDescriptorSetLayout, inOutResources.mLogicalDevice);
+	create_graphics_pipeline(windowResources.mPipelineLayout, windowResources.mGraphicsPipeline, inOutResources.mLogicalDevice, windowResources.mDescriptorSetLayout, windowResources.mRenderPass, state.mSwapchain.mExtent, state.mMsaaCount);
+	windowState.mSwapchain = NPoVulkanSwapchainBehavior::init(windowResources.mSwapchain, windowResources.mSurface, inOutResources.mLogicalDevice, windowResources.mCommandPool, state.mGraphicsQueue, windowResources.mRenderPass,
+		settings.mSwapchain, state.mSwapchainSupportDetails, state.mQueueFamilyIndices, extent, state.mSurfaceFormat, state.mDepthFormat, state.mMsaaCount, state.mMemoryProperties);
+	create_descriptor_pool(windowResources.mDescriptorPool, inOutResources.mLogicalDevice, state.mSwapchain.mImageCount * NPoGameObjectBehavior::gk_max_game_objects);
+	std::vector<VkDescriptorSetLayout> layouts(state.mSwapchain.mImageCount, windowResources.mDescriptorSetLayout);
+	VkDescriptorSetAllocateInfo allocInfo{};
+	allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+	allocInfo.descriptorPool = windowResources.mDescriptorPool;
+	allocInfo.descriptorSetCount = static_cast<uint32_t>(layouts.size());
+	allocInfo.pSetLayouts = layouts.data();
+
+	// hard coded game objects not a big deal for now we'll figure out the structure later
+	// TODO : Figure out the structure
+	for (int i = 0; i < windowState.mGameObjects.size(); ++i)
+	{
+		windowState.mGameObjects[i] = NPoGameObjectBehavior::init(windowResources.mGameObjects[i], settings.mGameObjects[i],
+			inOutResources.mLogicalDevice, inOutResources.mTexture.mImageView, inOutResources.mTexture.mSampler,
+			layouts, windowResources.mDescriptorPool, state.mMemoryProperties, state.mSwapchain.mImageCount);
+	}
+
+	create_command_buffers(windowResources.mCommandBuffers, inOutResources.mLogicalDevice, windowResources.mCommandPool, state.mSwapchain.mImageCount);
+
+	create_sync_objects(windowResources.mImageAvailableSemaphores, windowResources.mRenderFinishedSemaphores, windowResources.mInFlightFences, inOutResources.mLogicalDevice, state.mSwapchain.mImageCount);
+	return windowState.mUniqueId;
+}
+
+void NPoVulkanDeviceBehavior::close_window(SPoVulkanDeviceResources &inOutResources, SPoVulkanDeviceState &inOutState, SPoVulkanDeviceSettings const &settings, SPoWindowId const windowId)
+{
+	if (windowId.mId < 0)
+	{
+		return;
+	}
+	int windowIndex = 0;
+	for (;windowIndex < inOutResources.mWindowResourcesVector.size(); ++windowIndex)
+	{
+		if (inOutState.mWindowStateVector[windowIndex].mUniqueId == windowId)
+		{
+			break;
+		}
+	}
+
+
+	SPoVulkanWindowSettings const &windowSettings = settings.mWindowsSettings;
+	SPoVulkanWindowState &windowState = inOutState.mWindowStateVector[windowIndex];
+	SPoVulkanWindowResources &windowResources = inOutResources.mWindowResourcesVector[windowIndex];
+
+	int const imageCount = windowState.mSwapchain.mImageCount;
+	for (int i = 0; i < windowState.mGameObjects.size(); ++i)
+	{
+		NPoGameObjectBehavior::cleanup(windowResources.mGameObjects[i], windowState.mGameObjects[i], settings.mGameObjects[i]);
+	}
+
+	NPoVulkanSwapchainBehavior::cleanup(windowResources.mSwapchain, windowState.mSwapchain, settings.mSwapchain);
+
+	vkDestroyDescriptorPool(inOutResources.mLogicalDevice, windowResources.mDescriptorPool, nullptr);
+
+	vkDestroyDescriptorSetLayout(inOutResources.mLogicalDevice, windowResources.mDescriptorSetLayout, nullptr);
+
+	vkDestroyPipeline(inOutResources.mLogicalDevice, windowResources.mGraphicsPipeline, nullptr);
+	vkDestroyPipelineLayout(inOutResources.mLogicalDevice, windowResources.mPipelineLayout, nullptr);
+	vkDestroyRenderPass(inOutResources.mLogicalDevice, windowResources.mRenderPass, nullptr);
+
+
+	for (size_t i = 0; i < imageCount; ++i)
+	{
+		vkDestroySemaphore(inOutResources.mLogicalDevice, windowResources.mImageAvailableSemaphores[i], nullptr);
+		vkDestroySemaphore(inOutResources.mLogicalDevice, windowResources.mRenderFinishedSemaphores[i], nullptr);
+		vkDestroyFence(inOutResources.mLogicalDevice, windowResources.mInFlightFences[i], nullptr);
+	}
+
+	vkDestroyCommandPool(inOutResources.mLogicalDevice, windowResources.mCommandPool, nullptr);
+	vkDestroySurfaceKHR(inOutState.mInstance, windowResources.mSurface, nullptr);
+
+	NPoWindowBehavior::cleanup(windowResources.mWindow, windowState.mWindow, windowSettings.mWindow);
+}
+
+
+void NPoVulkanDeviceBehavior::draw_window_frames(SPoVulkanDeviceResources &inOutResources, SPoVulkanDeviceState &inOutState, SPoVulkanDeviceSettings const &settings)
+{
+	for (int windowIndex = 0; windowIndex < inOutResources.mWindowResourcesVector.size(); ++windowIndex)
+	{
+
+		SPoVulkanWindowResources &windowResources = inOutResources.mWindowResourcesVector[windowIndex];
+		SPoVulkanWindowState &windowState = inOutState.mWindowStateVector[windowIndex];
+		SPoVulkanWindowSettings const &windowSettings = settings.mWindowsSettings;
+		using namespace NPoVulkanDevicePrivate;
+		int const imageCount = inOutState.mSwapchain.mImageCount;
+		int &currentFrame = windowState.mCurrentFrame;
+		VkDevice device = inOutResources.mLogicalDevice;
+		vkWaitForFences(inOutResources.mLogicalDevice, 1, &windowResources.mInFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
+
+
+		uint32_t imageIndex;
+		VkResult result = vkAcquireNextImageKHR(device, windowResources.mSwapchain.mSwapchain, UINT64_MAX, windowResources.mImageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
+
+		if (result == VK_ERROR_OUT_OF_DATE_KHR)
+		{
+			NPoVulkanDeviceBehavior::recreate_swap_chains_for_resize(inOutResources, inOutState, settings);
+			return;
+		}
+		else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
+		{
+			throw std::runtime_error("failed to acquire swap chain image!");
+		}
+
+		vkResetFences(device, 1, &windowResources.mInFlightFences[currentFrame]);
+
+		vkResetCommandBuffer(windowResources.mCommandBuffers[currentFrame], 0);
+
+		record_command_buffer(windowResources.mCommandBuffers[currentFrame], imageIndex, currentFrame,
+			windowResources.mRenderPass, windowResources.mSwapchain.mFrameBuffers, windowState.mSwapchain.mExtent,
+			windowResources.mGraphicsPipeline, windowResources.mPipelineLayout, inOutResources.mMesh,
+			windowResources.mGameObjects, windowState.mGameObjects);
+
+
+		glm::mat4 view = glm::lookAt(glm::vec3(0.0f, 2.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+
+		glm::mat4 projection = glm::perspective(glm::radians(45.0f), windowState.mSwapchain.mExtent.width / (float)windowState.mSwapchain.mExtent.height, 0.1f, 10.0f);
+		projection[1][1] *= -1.0;
+		for (int i = 0; i < NPoGameObjectBehavior::gk_max_game_objects; ++i)
+		{
+			NPoGameObjectBehavior::update_uniform_buffers(windowResources.mGameObjects[i], windowState.mGameObjects[i], settings.mGameObjects[i], currentFrame, view, projection);
+		}
+
+		VkSubmitInfo submitInfo{};
+		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+		VkSemaphore waitSemaphores[] = { windowResources.mImageAvailableSemaphores[currentFrame] };
+		VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+		submitInfo.waitSemaphoreCount = 1;
+		submitInfo.pWaitSemaphores = waitSemaphores;
+		submitInfo.pWaitDstStageMask = waitStages;
+
+		submitInfo.commandBufferCount = 1;
+		submitInfo.pCommandBuffers = &windowResources.mCommandBuffers[currentFrame];
+
+		VkSemaphore signalSemaphores[] = { windowResources.mRenderFinishedSemaphores[currentFrame] };
+		submitInfo.signalSemaphoreCount = 1;
+		submitInfo.pSignalSemaphores = signalSemaphores;
+
+		if (vkQueueSubmit(inOutState.mGraphicsQueue, 1, &submitInfo, windowResources.mInFlightFences[currentFrame]) != VK_SUCCESS)
+		{
+			throw std::runtime_error("failed to submit draw command buffer!");
+		}
+
+		VkPresentInfoKHR presentInfo{};
+		presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+		presentInfo.waitSemaphoreCount = 1;
+		presentInfo.pWaitSemaphores = signalSemaphores;
+
+		VkSwapchainKHR swapChains[] = { windowResources.mSwapchain.mSwapchain };
+		presentInfo.swapchainCount = 1;
+		presentInfo.pSwapchains = swapChains;
+		presentInfo.pImageIndices = &imageIndex;
+		presentInfo.pResults = nullptr;
+
+		result = vkQueuePresentKHR(inOutState.mPresentQueue, &presentInfo);
+
+		if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || windowState.mFramebufferResized)
+		{
+			windowState.mFramebufferResized = false;
+			NPoVulkanDeviceBehavior::recreate_swap_chains_for_resize(inOutResources, inOutState, settings);
+		}
+		else if (result != VK_SUCCESS)
+		{
+			throw std::runtime_error("failed to present swap chain image!");
+		}
+
+		windowState.mCurrentFrame = (windowState.mCurrentFrame + 1) % imageCount;
+	}
 }

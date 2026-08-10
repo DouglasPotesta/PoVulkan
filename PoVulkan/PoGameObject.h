@@ -4,7 +4,9 @@
 #include "PoGlfw.h"
 #include "PoTransform.h"
 
-
+/// <summary>
+/// This is temporary. Will remove this in favor of something like a draw call structure
+/// </summary>
 
 struct SPoGameObjectSettings
 {
