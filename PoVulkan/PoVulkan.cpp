@@ -3,7 +3,7 @@
 
 #include <stdexcept>
 #include <iostream>
-
+#include "slang/slang.h"
 
 namespace NPoVulkanPrivate
 {
@@ -201,6 +201,11 @@ SPoVulkanState NPoVulkanBehavior::init(SPoVulkanResources &outResources, SPoVulk
 	{
 		init_debug_messenger(outResources.mDebugMessenger, outResources.mInstance, settings);
 	}
+	auto result = slang::createGlobalSession(outResources.mpSlangGlobalSession.writeRef());
+	if (!SLANG_SUCCEEDED(result))
+	{
+		throw std::runtime_error("failed to setup slang compilation!");
+	}
 
 	return {};
 }
@@ -214,6 +219,6 @@ void NPoVulkanBehavior::cleanup(SPoVulkanResources &inOutResources, SPoVulkanSet
 	{
 		func(inOutResources.mInstance, inOutResources.mDebugMessenger, nullptr);
 	}
-
 	vkDestroyInstance(inOutResources.mInstance, nullptr);
+	inOutResources.mpSlangGlobalSession.setNull();
 }

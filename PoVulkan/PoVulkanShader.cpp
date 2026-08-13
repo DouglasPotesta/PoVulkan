@@ -5,6 +5,8 @@
 #include <ios>
 #include <fstream>
 
+
+
 namespace NPoVulkanShaderPrivate
 {
 	std::vector<char> read_file(const std::string &filename)
