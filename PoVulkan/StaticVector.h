@@ -163,8 +163,9 @@ public:
 		size_type moveIndex = posIndex + 1;
 		resize(1 + mCount);
 
-		for (size_type i = mCount - 1; i-- > moveIndex; )
+		for (size_type i = mCount - 1; i > moveIndex; )
 		{
+			--i;
 			mData[i] = std::move(mData[i - 1]);
 		}
 		mData[posIndex] = value;
@@ -176,8 +177,9 @@ public:
 		size_type moveIndex = posIndex + 1;
 		resize(1 + mCount);
 
-		for (size_type i = mCount - 1; i-- > moveIndex;)
+		for (size_type i = mCount - 1; i > moveIndex;)
 		{
+			--i;
 			mData[i] = std::move(mData[i - 1]);
 		}
 		mData[posIndex] = std::move(value);
@@ -190,8 +192,9 @@ public:
 		size_type moveIndex = posIndex + count;
 		resize(count + mCount);
 
-		for (size_type i = mCount - 1; i-- > moveIndex;)
+		for (size_type i = mCount - 1; i > moveIndex;)
 		{
+			--i
 			mData[i] = std::move(mData[i - count]);
 		}
 		for (size_type i = posIndex; i < posIndex + count; ++i)
@@ -208,8 +211,9 @@ public:
 		size_type moveIndex = posIndex + count;
 		resize(count + mCount);
 
-		for (size_type i = mCount - 1; i-- > moveIndex;)
+		for (size_type i = mCount - 1; i > moveIndex;)
 		{
+			--i;
 			mData[i] = std::move(mData[i - count]);
 		}
 		iterator itr = mData.begin() + posIndex;
@@ -232,8 +236,9 @@ public:
 		size_type moveIndex = posIndex + count;
 		resize(count + mCount);
 
-		for (size_type i = mCount - 1; i-- > moveIndex;)
+		for (size_type i = mCount - 1; i > moveIndex;)
 		{
+			--i;
 			mData[i] = std::move(mData[i - count]);
 		}
 

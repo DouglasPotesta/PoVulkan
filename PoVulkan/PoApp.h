@@ -13,14 +13,14 @@ struct SPoAppSettings
 
 struct SPoAppState
 {
-	SPoWindowState mWindow;
+	std::vector<SPoWindowState> mWindows;
 	SPoVulkanState mVulkan;
 	SPoVulkanDeviceState mDevice;
 };
 
 struct SPoAppResources
 {
-	SPoWindowResources mWindow;
+	std::vector<SPoWindowResources> mWindows;
 	SPoVulkanResources mVulkan;
 	SPoVulkanDeviceResources mDevice;
 };

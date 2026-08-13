@@ -100,7 +100,7 @@ void NPoGameObjectBehavior::update_uniform_buffers(SPoGameObjectResources &resou
 	float x = glm::cos(cycle);
 	SPoTransform transform = state.mTransform;
 	// transform.mPosition.x = x;
-	transform.mPosition.y = y;
+	//transform.mPosition.y = y;
 
 	SPoVulkanUniformState ubo{};
 	ubo.model = transform.ToMatrix() * glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));

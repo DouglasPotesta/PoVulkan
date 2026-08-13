@@ -28,7 +28,6 @@ struct SPoWindowId
 
 struct SPoVulkanWindowSettings
 {
-	SPoWindowSettings mWindow;
 	SPoVulkanSwapchainSettings mSwapchain;
 	std::array<SPoGameObjectSettings, NPoGameObjectBehavior::gk_max_game_objects> mGameObjects;
 
@@ -36,18 +35,17 @@ struct SPoVulkanWindowSettings
 
 struct SPoVulkanWindowState
 {
-	SPoWindowState mWindow;
 	GLFWwindow *mpWindow = nullptr;
 	std::array<SPoGameObjectState, NPoGameObjectBehavior::gk_max_game_objects> mGameObjects;
 	SPoVulkanSwapchainState mSwapchain;
 	int mCurrentFrame = 0;
 	bool mFramebufferResized = false;
+	SSwapchainSupportDetails mSwapchainSupportDetails = {};
 	SPoWindowId mUniqueId = {};
 };
 
 struct SPoVulkanWindowResources
 {
-	SPoWindowResources mWindow;
 	VkSurfaceKHR mSurface = VK_NULL_HANDLE;
 	SPoVulkanSwapchainResources mSwapchain;
 	VkRenderPass mRenderPass = VK_NULL_HANDLE;
@@ -69,9 +67,6 @@ struct SPoVulkanDeviceSettings
 		VK_KHR_SWAPCHAIN_EXTENSION_NAME
 	};
 
-	SPoVulkanSwapchainSettings mSwapchain;
-	std::array<SPoGameObjectSettings, NPoGameObjectBehavior::gk_max_game_objects> mGameObjects;
-
 	SPoTextureSettings mTexture;
 	SPoMeshSettings mMesh;
 
@@ -84,17 +79,9 @@ struct SPoVulkanDeviceState
 
 	VkPhysicalDevice mPhysicalDevice = VK_NULL_HANDLE;
 	SQueueFamilyIndices mQueueFamilyIndices = {};
-	SSwapchainSupportDetails mSwapchainSupportDetails = {};
 	// note this is managed by the logical device
 	VkQueue mGraphicsQueue;
-	// note this is managed by the logical device
-
-	GLFWwindow *mpWindow = nullptr;
 	VkQueue mPresentQueue;
-	std::array<SPoGameObjectState, NPoGameObjectBehavior::gk_max_game_objects> mGameObjects;
-	SPoVulkanSwapchainState mSwapchain;
-	int mCurrentFrame = 0;
-	bool mFramebufferResized = false;
 	std::vector<SPoVulkanWindowState> mWindowStateVector;
 
 
@@ -111,20 +98,8 @@ struct SPoVulkanDeviceResources
 	VkDevice mLogicalDevice = VK_NULL_HANDLE;
 	SPoTextureResources mTexture;
 	SPoMeshResources mMesh;
-
-	std::array<SPoGameObjectResources, NPoGameObjectBehavior::gk_max_game_objects> mGameObjects;
-	VkSurfaceKHR mSurface = VK_NULL_HANDLE;
-	SPoVulkanSwapchainResources mSwapchain;
-	VkRenderPass mRenderPass = VK_NULL_HANDLE;
-	VkDescriptorSetLayout mDescriptorSetLayout = VK_NULL_HANDLE;
-	VkPipelineLayout mPipelineLayout = VK_NULL_HANDLE;
-	VkPipeline mGraphicsPipeline = VK_NULL_HANDLE;
 	VkCommandPool mCommandPool = VK_NULL_HANDLE;
-	VkDescriptorPool mDescriptorPool = VK_NULL_HANDLE;
 	std::vector<VkCommandBuffer> mCommandBuffers;
-	std::vector<VkSemaphore> mImageAvailableSemaphores;
-	std::vector<VkSemaphore> mRenderFinishedSemaphores;
-	std::vector<VkFence> mInFlightFences;
 	std::vector<SPoVulkanWindowResources> mWindowResourcesVector;
 };
 
@@ -147,10 +122,10 @@ namespace NPoVulkanDeviceBehavior
 	SPoVulkanDeviceState init(SPoVulkanDeviceResources &outResources, SPoVulkanDeviceSettings const &settings, VkInstance instance, GLFWwindow *pWindow);
 	void cleanup(SPoVulkanDeviceResources &inOutResources, SPoVulkanDeviceState &inOutState, SPoVulkanDeviceSettings const &settings);
 
-	void draw_frame(SPoVulkanDeviceResources &inOutResources, SPoVulkanDeviceState &inOutState, SPoVulkanDeviceSettings const &settings);
-	void recreate_swap_chains_for_resize(SPoVulkanDeviceResources &inOutResources, SPoVulkanDeviceState &inOutState, SPoVulkanDeviceSettings const &settings);
+	//void draw_frame(SPoVulkanDeviceResources &inOutResources, SPoVulkanDeviceState &inOutState, SPoVulkanDeviceSettings const &settings);
+	void recreate_swap_chains_for_resize(SPoVulkanDeviceResources &inOutResources, SPoVulkanDeviceState &inOutState, SPoVulkanDeviceSettings const &settings, GLFWwindow *pWindow);
 
-	SPoWindowId add_window(SPoVulkanDeviceResources &inOutResources, SPoVulkanDeviceState &inOutState, SPoVulkanDeviceSettings const &settings);
-	void close_window(SPoVulkanDeviceResources &inOutResources, SPoVulkanDeviceState &inOutState, SPoVulkanDeviceSettings const &settings, SPoWindowId const windowId);
+	void add_window(SPoVulkanDeviceResources &inOutResources, SPoVulkanDeviceState &inOutState, SPoVulkanDeviceSettings const &settings, GLFWwindow *pWindow);
+	void close_window(SPoVulkanDeviceResources &inOutResources, SPoVulkanDeviceState &inOutState, SPoVulkanDeviceSettings const &settings, GLFWwindow *pWindow);
 	void draw_window_frames(SPoVulkanDeviceResources &inOutResources, SPoVulkanDeviceState &inOutState, SPoVulkanDeviceSettings const &settings);
 }

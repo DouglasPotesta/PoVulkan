@@ -149,10 +149,12 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="PoApp.h" />
+    <ClInclude Include="PoCamera.h" />
     <ClInclude Include="PoEngine.h" />
     <ClInclude Include="PoGameObject.h" />
     <ClInclude Include="PoGlfw.h" />
     <ClInclude Include="PoGlm.h" />
+    <ClInclude Include="PoMath.h" />
     <ClInclude Include="PoMesh.h" />
     <ClInclude Include="PoResource.h" />
     <ClInclude Include="PoResourceManager.h" />
@@ -169,6 +171,7 @@
   <ItemGroup>
     <None Include="shaders\compile_shaders.bat" />
     <None Include="shaders\simple_shader.frag" />
+    <None Include="shaders\simple_shader.geom" />
     <None Include="shaders\simple_shader.vert" />
   </ItemGroup>
   <ItemGroup>

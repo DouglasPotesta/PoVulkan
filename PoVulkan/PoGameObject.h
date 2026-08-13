@@ -16,6 +16,7 @@ struct SPoGameObjectSettings
 struct SPoGameObjectState
 {
 	SPoTransform mTransform;
+	glm::vec3 mVelocity = { 0.0f, 0.0f, 0.0f };
 	VkDevice mDevice = VK_NULL_HANDLE;
 	
 };

@@ -101,6 +101,12 @@
     <ClInclude Include="PoTransform.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="PoCamera.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PoMath.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\simple_shader.vert" />
@@ -108,6 +114,7 @@
     <None Include="shaders\compile_shaders.bat">
       <Filter>Source Files</Filter>
     </None>
+    <None Include="shaders\simple_shader.geom" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="_plan.txt" />
