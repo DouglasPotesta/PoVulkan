@@ -136,7 +136,7 @@ namespace NPoVulkanPrivate
 		appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
 		appInfo.pEngineName = "No Engine";
 		appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-		appInfo.apiVersion = VK_API_VERSION_1_0;
+		appInfo.apiVersion = VK_API_VERSION_1_4;
 
 		VkInstanceCreateInfo createInfo{};
 		createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
@@ -196,22 +196,20 @@ namespace NPoVulkanPrivate
 SPoVulkanState NPoVulkanBehavior::init(SPoVulkanResources &outResources, SPoVulkanSettings const &settings)
 {
 	using namespace NPoVulkanPrivate;
+	SPoVulkanState state;
+	// TODO : We have to rethink slang dependency and vulkan dependency on slang they are bidirectional right now which is super gross
+	// 
 	init_instance(outResources.mInstance, settings);
 	if (settings.mIsValidationLayersEnabled)
 	{
 		init_debug_messenger(outResources.mDebugMessenger, outResources.mInstance, settings);
 	}
-	auto result = slang::createGlobalSession(outResources.mpSlangGlobalSession.writeRef());
-	if (!SLANG_SUCCEEDED(result))
-	{
-		throw std::runtime_error("failed to setup slang compilation!");
-	}
 
-	return {};
+	return state;
 }
 
 
-void NPoVulkanBehavior::cleanup(SPoVulkanResources &inOutResources, SPoVulkanSettings const &settings)
+void NPoVulkanBehavior::cleanup(SPoVulkanResources &inOutResources, SPoVulkanState &inOutState, SPoVulkanSettings const &settings)
 {
 
 	auto func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(inOutResources.mInstance, "vkDestroyDebugUtilsMessengerEXT");
@@ -220,5 +218,7 @@ void NPoVulkanBehavior::cleanup(SPoVulkanResources &inOutResources, SPoVulkanSet
 		func(inOutResources.mInstance, inOutResources.mDebugMessenger, nullptr);
 	}
 	vkDestroyInstance(inOutResources.mInstance, nullptr);
-	inOutResources.mpSlangGlobalSession.setNull();
+
+	inOutResources = {};
+	inOutState = {};
 }

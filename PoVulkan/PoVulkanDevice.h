@@ -6,9 +6,13 @@
 #include "PoTexture.h"
 #include "PoMesh.h"
 #include "PoWindow.h"
+#include "PoSlang.h"
 
 #include <array>
 #include <vector>
+
+struct SPoSlangResources;
+struct SPoSlangState;
 
 
 struct SPoWindowResizeCommand
@@ -71,6 +75,7 @@ struct SPoVulkanDeviceSettings
 	SPoMeshSettings mMesh;
 
 	SPoVulkanWindowSettings mWindowsSettings;
+	SPoSlangSettings mSlang;
 };
 
 struct SPoVulkanDeviceState
@@ -91,6 +96,7 @@ struct SPoVulkanDeviceState
 	VkFormat mDepthFormat = {};
 	SPoTextureState mTexture;
 	SPoMeshState mMesh;
+	SPoSlangState mSlang;
 };
 
 struct SPoVulkanDeviceResources
@@ -101,6 +107,7 @@ struct SPoVulkanDeviceResources
 	VkCommandPool mCommandPool = VK_NULL_HANDLE;
 	std::vector<VkCommandBuffer> mCommandBuffers;
 	std::vector<SPoVulkanWindowResources> mWindowResourcesVector;
+	SPoSlangResources mSlang;
 };
 
 namespace NPoVulkanDeviceBehavior

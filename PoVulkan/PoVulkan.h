@@ -6,8 +6,6 @@
 
 #include <vector>
 #include <string>
-#include <slang/slang.h>
-#include <slang/slang-com-ptr.h>
 
 #ifdef NDEBUG
 #define PO_DEBUG_VALIDATION_LAYERS_ENABLED_DEFAULT (false)
@@ -35,11 +33,10 @@ struct SPoVulkanResources
 {
 	VkInstance mInstance;
 	VkDebugUtilsMessengerEXT mDebugMessenger;
-	Slang::ComPtr<slang::IGlobalSession> mpSlangGlobalSession;
 };
 
 namespace NPoVulkanBehavior
 {
 	SPoVulkanState init(SPoVulkanResources &outResources, SPoVulkanSettings const &settings);
-	void cleanup(SPoVulkanResources &outResources, SPoVulkanSettings const &settings);
+	void cleanup(SPoVulkanResources &outResources, SPoVulkanState &inOutState, SPoVulkanSettings const &settings);
 }

@@ -105,7 +105,7 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>C:\VulkanSDK\1.4.350.0\Include;C:\Users\dpola\Documents\Visual Studio 2022\Libraries\tinyobjloader;C:\Users\dpola\Documents\Visual Studio 2022\Libraries\stb;C:\Users\dpola\Documents\Visual Studio 2022\Libraries\glm;C:\Users\dpola\Documents\Visual Studio 2022\Libraries\glfw-3.4.bin.WIN64\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <LanguageStandard>stdcpp17</LanguageStandard>
+      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -123,7 +123,7 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>C:\VulkanSDK\1.4.350.0\Include;C:\Users\dpola\Documents\Visual Studio 2022\Libraries\tinyobjloader;C:\Users\dpola\Documents\Visual Studio 2022\Libraries\stb;C:\Users\dpola\Documents\Visual Studio 2022\Libraries\glm;C:\Users\dpola\Documents\Visual Studio 2022\Libraries\glfw-3.4.bin.WIN64\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <LanguageStandard>stdcpp17</LanguageStandard>
+      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -139,9 +139,11 @@
     <ClCompile Include="PoApp.cpp" />
     <ClCompile Include="PoGameObject.cpp" />
     <ClCompile Include="PoMesh.cpp" />
+    <ClCompile Include="PoSlang.cpp" />
     <ClCompile Include="PoTexture.cpp" />
     <ClCompile Include="PoVulkan.cpp" />
     <ClCompile Include="PoVulkanDevice.cpp" />
+    <ClCompile Include="PoVulkanPipeline.cpp" />
     <ClCompile Include="PoVulkanSwapchain.cpp" />
     <ClCompile Include="PoVulkanUniform.cpp" />
     <ClCompile Include="PoWindow.cpp" />
@@ -158,9 +160,11 @@
     <ClInclude Include="PoMesh.h" />
     <ClInclude Include="PoResource.h" />
     <ClInclude Include="PoResourceManager.h" />
+    <ClInclude Include="PoSlang.h" />
     <ClInclude Include="PoTexture.h" />
     <ClInclude Include="PoVulkan.h" />
     <ClInclude Include="PoVulkanDevice.h" />
+    <ClInclude Include="PoVulkanPipeline.h" />
     <ClInclude Include="PoVulkanSwapchain.h" />
     <ClInclude Include="PoVulkanUniform.h" />
     <ClInclude Include="PoWindow.h" />
@@ -172,6 +176,7 @@
     <None Include="shaders\compile_shaders.bat" />
     <None Include="shaders\simple_shader.frag" />
     <None Include="shaders\simple_shader.geom" />
+    <None Include="shaders\simple_shader.slang" />
     <None Include="shaders\simple_shader.vert" />
   </ItemGroup>
   <ItemGroup>

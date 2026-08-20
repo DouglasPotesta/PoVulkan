@@ -48,6 +48,12 @@
     <ClCompile Include="PoGameObject.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="PoSlang.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PoVulkanPipeline.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="PoWindow.h">
@@ -107,6 +113,12 @@
     <ClInclude Include="PoMath.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="PoSlang.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PoVulkanPipeline.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\simple_shader.vert" />
@@ -115,6 +127,7 @@
       <Filter>Source Files</Filter>
     </None>
     <None Include="shaders\simple_shader.geom" />
+    <None Include="shaders\simple_shader.slang" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="_plan.txt" />

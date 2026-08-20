@@ -96,7 +96,6 @@ void NPoAppBehavior::run()
 	SPoAppState state;
 	SPoAppResources resources;
 
-
 	std::atomic_bool shouldExit = false;
 	std::mutex syncMutex;
 	std::atomic_bool renderBusy = true;
@@ -104,7 +103,7 @@ void NPoAppBehavior::run()
 
 	std::thread gameThread(NPoAppPrivate::run_game_loop, std::ref(state), std::ref(resources), std::ref(gameBusy), std::ref(renderBusy), std::ref(shouldExit), std::ref(settings));
 
-	NPoVulkanBehavior::init(resources.mVulkan, settings.mVulkan);
+	state.mVulkan = NPoVulkanBehavior::init(resources.mVulkan, settings.mVulkan);
 
 	state.mWindows.push_back(NPoWindowBehavior::init(resources.mWindows.emplace_back(), settings.mWindow));
 	GLFWwindow *pWindow = resources.mWindows.back().mpWindow;
@@ -180,48 +179,6 @@ void NPoAppBehavior::run()
 			std::this_thread::yield();
 		}
 	}
-	/*while (!(shouldExit = NPoWindowBehavior::should_close(getPrimaryWindowFunc())))
-	{
-		glfwPollEvents();
-		while (gameBusy)
-		{
-			std::this_thread::yield();
-		}
-		renderBusy = true;
-		NPoVulkanDeviceBehavior::draw_frame(resources.mDevice,
-			state.mDevice, settings.mDevice);
-		if (waiter > 0)
-		{ 
-			--waiter;
-		}
-		if (waiter == 0)
-		{
-			waiterHandle = NPoVulkanDeviceBehavior::add_window(resources.mDevice, state.mDevice, settings.mDevice);
-			waiter = -1;
-		}
-		if (waiter == -1)
-		{
-			if (!(waiterHandle == SPoWindowId()))
-			{
-				if (NPoWindowBehavior::should_close(resources.mDevice.mWindowResourcesVector[0].mWindow))
-				{
-					vkDeviceWaitIdle(resources.mDevice.mLogicalDevice);
-					NPoVulkanDeviceBehavior::close_window(resources.mDevice, state.mDevice, settings.mDevice, waiterHandle);
-					waiterHandle = {};
-				}
-				else
-				{
-					NPoVulkanDeviceBehavior::draw_window_frames(resources.mDevice,
-						state.mDevice, settings.mDevice);
-				}
-			}
-		}
-		renderBusy = false;
-		while (gameBusy)
-		{
-			std::this_thread::yield();
-		}
-	}*/
 	gameThread.join();
 	vkDeviceWaitIdle(resources.mDevice.mLogicalDevice);
 
@@ -235,8 +192,8 @@ void NPoAppBehavior::run()
 		NPoWindowBehavior::cleanup(resources.mWindows[i], state.mWindows[i], settings.mWindow);
 	}
 
-	NPoVulkanBehavior::cleanup(resources.mVulkan, settings.mVulkan);
-	
+	NPoVulkanBehavior::cleanup(resources.mVulkan, state.mVulkan, settings.mVulkan);
+
 	glfwTerminate();
 
 

@@ -2,6 +2,7 @@
 #include "PoVulkanSwapchain.h"
 #include "PoGlm.h"
 #include "PoMesh.h"
+#include "PoSlang.h"
 
 
 #include <stdexcept>
@@ -10,7 +11,7 @@
 #include <array>
 #include <ios>
 #include <fstream>
-
+#include <slang/slang-cpp-types-core.h>
 
 
 /* Implementation for vulkan device behavior.
@@ -211,6 +212,7 @@ namespace NPoVulkanDevicePrivate
 		deviceFeatures.samplerAnisotropy = VK_TRUE;
 		deviceFeatures.sampleRateShading = VK_TRUE;
 
+
 		VkDeviceCreateInfo createInfo{};
 		createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 
@@ -221,6 +223,24 @@ namespace NPoVulkanDevicePrivate
 
 		createInfo.enabledExtensionCount = static_cast<uint32_t>(settings.mDeviceExtensions.size());
 		createInfo.ppEnabledExtensionNames = settings.mDeviceExtensions.data();
+
+		VkPhysicalDeviceVulkan13Features vulkanFeatures13 = {};
+		vulkanFeatures13.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
+		vulkanFeatures13.synchronization2 = true;
+		vulkanFeatures13.dynamicRendering = true;
+
+		VkPhysicalDeviceVulkan12Features vulkanFeatures12 = {};
+		vulkanFeatures12.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
+		vulkanFeatures12.pNext = &vulkanFeatures13;
+		vulkanFeatures12.runtimeDescriptorArray = VK_TRUE;
+		vulkanFeatures12.descriptorIndexing = VK_TRUE;
+		vulkanFeatures12.shaderSampledImageArrayNonUniformIndexing = VK_TRUE;
+		vulkanFeatures12.descriptorBindingVariableDescriptorCount = VK_TRUE;
+		vulkanFeatures12.bufferDeviceAddress = VK_TRUE;
+		VkPhysicalDeviceVulkan11Features vulkanFeatures11 = {};
+		vulkanFeatures11.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES;
+		vulkanFeatures11.pNext = &vulkanFeatures12;
+		createInfo.pNext = &vulkanFeatures11;
 
 		// this is deprecated so its set to zero
 		createInfo.enabledLayerCount = 0;
@@ -409,25 +429,22 @@ namespace NPoVulkanDevicePrivate
 		return shaderModule;
 	}
 
-	void create_graphics_pipeline(VkPipelineLayout &outPipelineLayout, VkPipeline &outGraphicsPipeline, VkDevice device, VkDescriptorSetLayout descriptorSetLayout, VkRenderPass renderPass, VkExtent2D const &extent, VkSampleCountFlagBits const msaaSamples)
+	void create_graphics_pipeline(VkPipelineLayout &outPipelineLayout, VkPipeline &outGraphicsPipeline, VkDevice device, VkDescriptorSetLayout descriptorSetLayout, VkRenderPass renderPass, VkExtent2D const &extent, VkSampleCountFlagBits const msaaSamples, SPoSlangState const &slangState, SPoSlangResources &slangResources)
 	{
-		auto vertShaderCode = read_file("shaders/simple_shader_vert.spv");
-
-		auto fragShaderCode = read_file("shaders/simple_shader_frag.spv");
-
-		VkShaderModule vertShaderModule = create_shader_module(device, vertShaderCode);
-		VkShaderModule fragShaderModule = create_shader_module(device, fragShaderCode);
+		VkShaderModule slangVert;
+		VkShaderModule slangFrag;
+		NPoSlangBehavior::get_current_shaders(slangVert, slangFrag, slangState, slangResources);
 
 		VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
 		vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 		vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
-		vertShaderStageInfo.module = vertShaderModule;
+		vertShaderStageInfo.module = slangVert;
 		vertShaderStageInfo.pName = "main";
 
 		VkPipelineShaderStageCreateInfo fragShaderStageInfo{};
 		fragShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 		fragShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-		fragShaderStageInfo.module = fragShaderModule;
+		fragShaderStageInfo.module = slangFrag;
 		fragShaderStageInfo.pName = "main";
 
 		VkPipelineShaderStageCreateInfo shaderStages[] = { vertShaderStageInfo, fragShaderStageInfo };
@@ -567,9 +584,6 @@ namespace NPoVulkanDevicePrivate
 		{
 			throw std::runtime_error("failed to create graphics pipeline");
 		}
-
-		vkDestroyShaderModule(device, vertShaderModule, nullptr);
-		vkDestroyShaderModule(device, fragShaderModule, nullptr);
 	}
 	void create_command_pool(VkCommandPool &outCommandPool, VkDevice device, SQueueFamilyIndices const &indices)
 	{
@@ -697,7 +711,12 @@ namespace NPoVulkanDevicePrivate
 			}
 		}
 	}
-
+	/*
+	* so for something like deferred pbr rendering...
+	* an object gets a pipeline for rendering normals, roughness/metalness, albedo, emissive, and depth
+	* then a final pipeline is used to render the combo of these things with lighting
+	* 
+	*/
 	// feel like this should be called create render objects then make the vulkan game objects which will make their respective
 	// uniform buffers and descriptor sets
 	
@@ -1156,101 +1175,11 @@ void NPoVulkanDeviceBehavior::cleanup(SPoVulkanDeviceResources &inOutResources, 
 	}
 
 	vkDestroyCommandPool(inOutResources.mLogicalDevice, inOutResources.mCommandPool, nullptr);
+
+	NPoSlangBehavior::cleanup(inOutResources.mSlang, inOutState.mSlang, settings.mSlang);
+	
 	vkDestroyDevice(inOutResources.mLogicalDevice, nullptr);
 }
-
-//
-//
-//void NPoVulkanDeviceBehavior::draw_frame(SPoVulkanDeviceResources &inOutResources, SPoVulkanDeviceState &inOutState, SPoVulkanDeviceSettings const &settings)
-//{
-//	using namespace NPoVulkanDevicePrivate;
-//	int const imageCount = inOutState.mSwapchain.mImageCount;
-//	int &currentFrame = inOutState.mCurrentFrame;
-//	VkDevice device = inOutResources.mLogicalDevice;
-//	vkWaitForFences(inOutResources.mLogicalDevice, 1, &inOutResources.mInFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
-//
-//
-//	uint32_t imageIndex;
-//	VkResult result = vkAcquireNextImageKHR(device, inOutResources.mSwapchain.mSwapchain, UINT64_MAX, inOutResources.mImageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
-//
-//	if (result == VK_ERROR_OUT_OF_DATE_KHR)
-//	{
-//		recreate_swap_chains_for_resize(inOutResources, inOutState, settings, inOutState.mpWindow);
-//		return;
-//	}
-//	else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
-//	{
-//		throw std::runtime_error("failed to acquire swap chain image!");
-//	}
-//
-//	vkResetFences(device, 1, &inOutResources.mInFlightFences[currentFrame]);
-//
-//	vkResetCommandBuffer(inOutResources.mCommandBuffers[currentFrame], 0);
-//
-//	record_command_buffer(inOutResources.mCommandBuffers[currentFrame], imageIndex, currentFrame,
-//		inOutResources.mRenderPass, inOutResources.mSwapchain.mFrameBuffers, inOutState.mSwapchain.mExtent,
-//		inOutResources.mGraphicsPipeline, inOutResources.mPipelineLayout, inOutResources.mMesh,
-//		inOutResources.mGameObjects, inOutState.mGameObjects);
-//
-//
-//	glm::mat4 view = glm::lookAt(glm::vec3(0.0f, 2.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-//	float const aspectRatio = inOutState.mSwapchain.mExtent.width / (float)inOutState.mSwapchain.mExtent.height;
-//	float const verticalFov = atan(tan(90.0f * 0.5) / aspectRatio);
-//	glm::mat4 projection = glm::perspective(verticalFov, aspectRatio, 0.1f, 10.0f);
-//	projection[1][1] *= -1.0;
-//	for (int i = 0; i < NPoGameObjectBehavior::gk_max_game_objects; ++i)
-//	{
-//		NPoGameObjectBehavior::update_uniform_buffers(inOutResources.mGameObjects[i], inOutState.mGameObjects[i], settings.mGameObjects[i], currentFrame, view, projection);
-//	}
-//
-//	VkSubmitInfo submitInfo{};
-//	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-//
-//	VkSemaphore waitSemaphores[] = { inOutResources.mImageAvailableSemaphores[currentFrame] };
-//	VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-//	submitInfo.waitSemaphoreCount = 1;
-//	submitInfo.pWaitSemaphores = waitSemaphores;
-//	submitInfo.pWaitDstStageMask = waitStages;
-//
-//	submitInfo.commandBufferCount = 1;
-//	submitInfo.pCommandBuffers = &inOutResources.mCommandBuffers[currentFrame];
-//
-//	VkSemaphore signalSemaphores[] = { inOutResources.mRenderFinishedSemaphores[currentFrame] };
-//	submitInfo.signalSemaphoreCount = 1;
-//	submitInfo.pSignalSemaphores = signalSemaphores;
-//
-//	if (vkQueueSubmit(inOutState.mGraphicsQueue, 1, &submitInfo, inOutResources.mInFlightFences[currentFrame]) != VK_SUCCESS)
-//	{
-//		throw std::runtime_error("failed to submit draw command buffer!");
-//	}
-//
-//	VkPresentInfoKHR presentInfo{};
-//	presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-//	presentInfo.waitSemaphoreCount = 1;
-//	presentInfo.pWaitSemaphores = signalSemaphores;
-//
-//	VkSwapchainKHR swapChains[] = { inOutResources.mSwapchain.mSwapchain };
-//	presentInfo.swapchainCount = 1;
-//	presentInfo.pSwapchains = swapChains;
-//	presentInfo.pImageIndices = &imageIndex;
-//	presentInfo.pResults = nullptr;
-//
-//	result = vkQueuePresentKHR(inOutState.mPresentQueue, &presentInfo);
-//
-//	if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || inOutState.mFramebufferResized)
-//	{
-//		inOutState.mFramebufferResized = false;
-//		// TODO : Pick correct window (including subwindows)
-//		recreate_swap_chains_for_resize(inOutResources, inOutState, settings, inOutState.mpWindow);
-//	}
-//	else if (result != VK_SUCCESS)
-//	{
-//		throw std::runtime_error("failed to present swap chain image!");
-//	}
-//
-//	inOutState.mCurrentFrame = (inOutState.mCurrentFrame + 1) % imageCount;
-//}
-
 
 void NPoVulkanDeviceBehavior::recreate_swap_chains_for_resize(SPoVulkanDeviceResources &inOutResources, SPoVulkanDeviceState &inOutState, SPoVulkanDeviceSettings const &settings, GLFWwindow *pWindow)
 {
@@ -1315,6 +1244,7 @@ void NPoVulkanDeviceBehavior::add_window(SPoVulkanDeviceResources &inOutResource
 			inOutResources.mLogicalDevice, inOutState.mPhysicalDevice, inOutResources.mCommandPool, inOutState.mGraphicsQueue, inOutState.mMemoryProperties);
 		inOutState.mMesh = NPoMeshBehavior::init(inOutResources.mMesh, settings.mMesh, inOutResources.mLogicalDevice, inOutState.mPhysicalDevice, inOutResources.mCommandPool,
 			inOutState.mGraphicsQueue, inOutState.mMemoryProperties);
+		inOutState.mSlang = NPoSlangBehavior::init(inOutResources.mSlang, settings.mSlang, inOutResources.mLogicalDevice);
 	}
 	SPoVulkanDeviceState const &state = inOutState;
 	// TODO : change this to take a window pointer that's it. windows themselves will be 
@@ -1324,7 +1254,7 @@ void NPoVulkanDeviceBehavior::add_window(SPoVulkanDeviceResources &inOutResource
 	VkExtent2D extent = NPoVulkanSwapchainBehavior::choose_swap_extent(pWindow, windowState.mSwapchainSupportDetails.mCapabilities);
 	create_render_pass(windowResources.mRenderPass, inOutResources.mLogicalDevice, state.mMsaaCount, state.mSurfaceFormat.format, state.mDepthFormat);
 	create_descriptor_set_layout(windowResources.mDescriptorSetLayout, inOutResources.mLogicalDevice);
-	create_graphics_pipeline(windowResources.mPipelineLayout, windowResources.mGraphicsPipeline, inOutResources.mLogicalDevice, windowResources.mDescriptorSetLayout, windowResources.mRenderPass, windowState.mSwapchain.mExtent, state.mMsaaCount);
+	create_graphics_pipeline(windowResources.mPipelineLayout, windowResources.mGraphicsPipeline, inOutResources.mLogicalDevice, windowResources.mDescriptorSetLayout, windowResources.mRenderPass, windowState.mSwapchain.mExtent, state.mMsaaCount, state.mSlang, inOutResources.mSlang);
 	windowState.mSwapchain = NPoVulkanSwapchainBehavior::init(windowResources.mSwapchain, windowResources.mSurface, inOutResources.mLogicalDevice, windowResources.mCommandPool, state.mGraphicsQueue, windowResources.mRenderPass,
 		windowSettings.mSwapchain, windowState.mSwapchainSupportDetails, state.mQueueFamilyIndices, extent, state.mSurfaceFormat, state.mDepthFormat, state.mMsaaCount, state.mMemoryProperties);
 	create_descriptor_pool(windowResources.mDescriptorPool, inOutResources.mLogicalDevice, windowState.mSwapchain.mImageCount * NPoGameObjectBehavior::gk_max_game_objects);
