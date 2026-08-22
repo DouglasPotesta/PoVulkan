@@ -119,6 +119,9 @@
     <ClInclude Include="PoVulkanPipeline.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="PoDrawCall.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\simple_shader.vert" />

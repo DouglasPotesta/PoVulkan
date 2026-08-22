@@ -13,6 +13,7 @@ struct SPoVulkanPipelineSettings
 struct SPoVulkanPipelineState
 {
 	VkDevice mDevice = VK_NULL_HANDLE;
+
 };
 
 struct SPoVulkanPipelineResources

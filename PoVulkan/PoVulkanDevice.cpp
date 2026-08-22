@@ -429,7 +429,7 @@ namespace NPoVulkanDevicePrivate
 		return shaderModule;
 	}
 
-	void create_graphics_pipeline(VkPipelineLayout &outPipelineLayout, VkPipeline &outGraphicsPipeline, VkDevice device, VkDescriptorSetLayout descriptorSetLayout, VkRenderPass renderPass, VkExtent2D const &extent, VkSampleCountFlagBits const msaaSamples, SPoSlangState const &slangState, SPoSlangResources &slangResources)
+	void create_graphics_pipeline(VkPipelineLayout &outPipelineLayout, VkPipeline &outGraphicsPipeline, VkDevice device, VkDescriptorSetLayout descriptorSetLayout, VkRenderPass renderPass, VkSampleCountFlagBits const msaaSamples, SPoSlangState const &slangState, SPoSlangResources &slangResources)
 	{
 		VkShaderModule slangVert;
 		VkShaderModule slangFrag;
@@ -474,24 +474,26 @@ namespace NPoVulkanDevicePrivate
 		inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 		inputAssembly.primitiveRestartEnable = VK_FALSE;
 
-		VkViewport viewport{};
-		viewport.x = 0.0f;
-		viewport.y = 0.0f;
-		viewport.width = (float)extent.width;
-		viewport.height = (float)extent.height;
-		viewport.minDepth = 0.0f;
-		viewport.maxDepth = 1.0f;
-
-		VkRect2D scissor{};
-		scissor.offset = { 0, 0 };
-		scissor.extent = extent;
+		// Commented out because we used to pass these, and these are only necessary if viewport and scissor are not dynamic
+		//VkViewport viewport{};
+		//viewport.x = 0.0f;
+		//viewport.y = 0.0f;
+		//viewport.width = (float)extent.width;
+		//viewport.height = (float)extent.height;
+		//viewport.minDepth = 0.0f;
+		//viewport.maxDepth = 1.0f;
+		//VkRect2D scissor{};
+		//scissor.offset = { 0, 0 };
+		//scissor.extent = extent;
 
 		VkPipelineViewportStateCreateInfo viewportState{};
 		viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
 		viewportState.viewportCount = 1;
 		viewportState.scissorCount = 1;
-		viewportState.pViewports = &viewport;
-		viewportState.pScissors = &scissor;
+		// can be null since it's set to dynamic
+		// means we do not have to recreate all pipelines for all possible dimensions
+		viewportState.pViewports = nullptr;
+		viewportState.pScissors = nullptr;
 
 		VkPipelineRasterizationStateCreateInfo rasterizer{};
 		rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
@@ -1225,7 +1227,8 @@ void NPoVulkanDeviceBehavior::add_window(SPoVulkanDeviceResources &inOutResource
 
 	windowState.mpWindow = pWindow;
 	create_surface(windowResources.mSurface, inOutState.mInstance, pWindow);
-	if (inOutResources.mLogicalDevice == VK_NULL_HANDLE)
+	bool const isInitializationLogicalDevice = inOutResources.mLogicalDevice == VK_NULL_HANDLE;
+	if (isInitializationLogicalDevice)
 	{
 		inOutState.mPhysicalDevice = pick_physical_device(inOutState.mInstance, windowResources.mSurface, settings);
 		inOutState.mMsaaCount = get_max_usable_sample_count(inOutState.mPhysicalDevice);
@@ -1233,7 +1236,7 @@ void NPoVulkanDeviceBehavior::add_window(SPoVulkanDeviceResources &inOutResource
 		vkGetPhysicalDeviceMemoryProperties(inOutState.mPhysicalDevice, &(inOutState.mMemoryProperties));
 	}
 	windowState.mSwapchainSupportDetails = NPoVulkanSwapchainBehavior::query_swap_chain_support(windowResources.mSurface, inOutState.mPhysicalDevice);
-	if (inOutResources.mLogicalDevice == VK_NULL_HANDLE)
+	if (isInitializationLogicalDevice)
 	{
 		inOutState.mSurfaceFormat = NPoVulkanSwapchainBehavior::choose_swap_surface_format(windowState.mSwapchainSupportDetails.mFormats);
 		inOutState.mDepthFormat = find_depth_format(inOutState.mPhysicalDevice);
@@ -1251,10 +1254,20 @@ void NPoVulkanDeviceBehavior::add_window(SPoVulkanDeviceResources &inOutResource
 	glfwSetFramebufferSizeCallback(pWindow, framebufferResizeCallback);
 
 	create_command_pool(windowResources.mCommandPool, inOutResources.mLogicalDevice, state.mQueueFamilyIndices);
-	VkExtent2D extent = NPoVulkanSwapchainBehavior::choose_swap_extent(pWindow, windowState.mSwapchainSupportDetails.mCapabilities);
 	create_render_pass(windowResources.mRenderPass, inOutResources.mLogicalDevice, state.mMsaaCount, state.mSurfaceFormat.format, state.mDepthFormat);
 	create_descriptor_set_layout(windowResources.mDescriptorSetLayout, inOutResources.mLogicalDevice);
-	create_graphics_pipeline(windowResources.mPipelineLayout, windowResources.mGraphicsPipeline, inOutResources.mLogicalDevice, windowResources.mDescriptorSetLayout, windowResources.mRenderPass, windowState.mSwapchain.mExtent, state.mMsaaCount, state.mSlang, inOutResources.mSlang);
+	// TODO : I am learning here.
+	// So the structure needs to be reworked fairly substantially. 
+	// The pipelines don't get created here, but rather when a gameobject is added that requires a new pipeline.
+	// This makes sense because a pipeline is used to render objects with a specific set of bindings and shaders
+	// We can bind multiple pipelines in our render commands so we essentially want a system like...
+	/**
+	* void add_draw_call(game_object, system) has_appropriate_pipeline(system.pipelines, game_object) => yes add game_object to that pipelines list / no create a pipeline for it and add this game object to that list
+	* void draw()
+	* for pipeline in pipelines => for object in pipeline.gameobject_draws => draw(pipeline, object)
+	*/
+	create_graphics_pipeline(windowResources.mPipelineLayout, windowResources.mGraphicsPipeline, inOutResources.mLogicalDevice, windowResources.mDescriptorSetLayout, windowResources.mRenderPass, state.mMsaaCount, state.mSlang, inOutResources.mSlang);
+	VkExtent2D const extent = NPoVulkanSwapchainBehavior::choose_swap_extent(pWindow, windowState.mSwapchainSupportDetails.mCapabilities);
 	windowState.mSwapchain = NPoVulkanSwapchainBehavior::init(windowResources.mSwapchain, windowResources.mSurface, inOutResources.mLogicalDevice, windowResources.mCommandPool, state.mGraphicsQueue, windowResources.mRenderPass,
 		windowSettings.mSwapchain, windowState.mSwapchainSupportDetails, state.mQueueFamilyIndices, extent, state.mSurfaceFormat, state.mDepthFormat, state.mMsaaCount, state.mMemoryProperties);
 	create_descriptor_pool(windowResources.mDescriptorPool, inOutResources.mLogicalDevice, windowState.mSwapchain.mImageCount * NPoGameObjectBehavior::gk_max_game_objects);

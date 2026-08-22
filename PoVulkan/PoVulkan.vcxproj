@@ -152,6 +152,7 @@
   <ItemGroup>
     <ClInclude Include="PoApp.h" />
     <ClInclude Include="PoCamera.h" />
+    <ClInclude Include="PoDrawCall.h" />
     <ClInclude Include="PoEngine.h" />
     <ClInclude Include="PoGameObject.h" />
     <ClInclude Include="PoGlfw.h" />

@@ -7,6 +7,7 @@
 #include "PoMesh.h"
 #include "PoWindow.h"
 #include "PoSlang.h"
+#include "PoVulkanPipeline.h"
 
 #include <array>
 #include <vector>
@@ -76,6 +77,7 @@ struct SPoVulkanDeviceSettings
 
 	SPoVulkanWindowSettings mWindowsSettings;
 	SPoSlangSettings mSlang;
+	SPoVulkanPipelineSettings mPipeline;
 };
 
 struct SPoVulkanDeviceState
@@ -97,6 +99,7 @@ struct SPoVulkanDeviceState
 	SPoTextureState mTexture;
 	SPoMeshState mMesh;
 	SPoSlangState mSlang;
+	SPoVulkanPipelineState mPipeline;
 };
 
 struct SPoVulkanDeviceResources
@@ -108,6 +111,7 @@ struct SPoVulkanDeviceResources
 	std::vector<VkCommandBuffer> mCommandBuffers;
 	std::vector<SPoVulkanWindowResources> mWindowResourcesVector;
 	SPoSlangResources mSlang;
+	SPoVulkanPipelineResources mPipeline;
 };
 
 namespace NPoVulkanDeviceBehavior
