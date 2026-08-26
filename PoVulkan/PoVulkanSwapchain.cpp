@@ -163,39 +163,11 @@ namespace NPoVulkanSwapchainPrivate
 
 		NPoVulkanDeviceBehavior::transition_image_layout(logicalDevice, commandPool, graphicsQueue, outDepthImage, format, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, 1);
 	}
-
-
-	void create_frame_buffers(std::vector<VkFramebuffer> &outFrameBuffers, VkDevice device, std::vector<VkImageView> const &imageViews, VkImageView colorImageView, VkImageView depthImageView, VkRenderPass renderPass, VkExtent2D const &extent)
-	{
-		outFrameBuffers.resize(imageViews.size());
-
-		for (size_t i = 0; i < imageViews.size(); ++i)
-		{
-			std::array<VkImageView, 3> attachments = {
-				colorImageView,
-				depthImageView,
-				imageViews[i]
-			};
-			VkFramebufferCreateInfo framebufferInfo{};
-			framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-			framebufferInfo.renderPass = renderPass;
-			framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-			framebufferInfo.pAttachments = attachments.data();
-			framebufferInfo.width = extent.width;
-			framebufferInfo.height = extent.height;
-			framebufferInfo.layers = 1;
-
-			if (vkCreateFramebuffer(device, &framebufferInfo, nullptr, &outFrameBuffers[i]) != VK_FALSE)
-			{
-				throw std::runtime_error("failed to create framebuffer!");
-			}
-		}
-	}
 }
 
 
 
-SPoVulkanSwapchainState NPoVulkanSwapchainBehavior::init(SPoVulkanSwapchainResources &outResources, VkSurfaceKHR surface, VkDevice device, VkCommandPool commandPool, VkQueue graphicsQueue, VkRenderPass renderPass,
+SPoVulkanSwapchainState NPoVulkanSwapchainBehavior::init(SPoVulkanSwapchainResources &outResources, VkSurfaceKHR surface, VkDevice device, VkCommandPool commandPool, VkQueue graphicsQueue,
 	SPoVulkanSwapchainSettings const &settings, SSwapchainSupportDetails const &supportDetails, SQueueFamilyIndices const &indices, 
 	VkExtent2D const &extent, VkSurfaceFormatKHR const surfaceFormat, VkFormat const depthFormat, VkSampleCountFlagBits const msaaCount, VkPhysicalDeviceMemoryProperties const &memoryProperties)
 {
@@ -222,8 +194,6 @@ SPoVulkanSwapchainState NPoVulkanSwapchainBehavior::init(SPoVulkanSwapchainResou
 		surfaceFormat.format, msaaCount, extent, memoryProperties);
 	create_depth_resources(outResources.mDepthImage, outResources.mDepthImageMemory, outResources.mDepthImageView, device, commandPool, graphicsQueue,
 		depthFormat, msaaCount, extent, memoryProperties);
-
-	create_frame_buffers(outResources.mFrameBuffers, device, outResources.mSwapchainImageViews, outResources.mColorImageView, outResources.mDepthImageView, renderPass, extent);
     return state;
 }
 
@@ -236,12 +206,6 @@ void NPoVulkanSwapchainBehavior::cleanup(SPoVulkanSwapchainResources &inOutResou
 	vkDestroyImageView(inOutState.mDevice, inOutResources.mDepthImageView, nullptr);
 	vkDestroyImage(inOutState.mDevice, inOutResources.mDepthImage, nullptr);
 	vkFreeMemory(inOutState.mDevice, inOutResources.mDepthImageMemory, nullptr);
-
-
-	for (auto framebuffer : inOutResources.mFrameBuffers)
-	{
-		vkDestroyFramebuffer(inOutState.mDevice, framebuffer, nullptr);
-	}
 
 	for (auto imageView : inOutResources.mSwapchainImageViews)
 	{

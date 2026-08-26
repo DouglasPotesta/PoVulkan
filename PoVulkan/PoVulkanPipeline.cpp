@@ -2,7 +2,7 @@
 #include "PoSlang.h"
 #include "PoMesh.h"
 
-SPoVulkanPipelineState NPoVulkanPipelineBehavior::init(SPoVulkanPipelineResources &outResources, SPoVulkanPipelineSettings const &settings, VkDevice device, VkDescriptorSetLayout descriptorSetLayout, VkRenderPass renderPass, VkExtent2D const &extent, VkSampleCountFlagBits const msaaSamples, SPoSlangState const &slangState, SPoSlangResources &slangResources)
+SPoVulkanPipelineState NPoVulkanPipelineBehavior::init(SPoVulkanPipelineResources &outResources, SPoVulkanPipelineSettings const &settings, VkDevice device, VkDescriptorSetLayout descriptorSetLayout, VkExtent2D const &extent, VkSampleCountFlagBits const msaaSamples, SPoSlangState const &slangState, SPoSlangResources &slangResources, VkFormat const colorFormat, VkFormat const depthFormat)
 {
     SPoVulkanPipelineState state;
 	VkShaderModule slangVert;
@@ -134,8 +134,18 @@ SPoVulkanPipelineState NPoVulkanPipelineBehavior::init(SPoVulkanPipelineResource
 		throw std::runtime_error("failed to create pipeline layout!");
 	}
 
-	VkGraphicsPipelineCreateInfo pipelineInfo{};
+	// Provide information for dynamic rendering
+	VkPipelineRenderingCreateInfo pipelineCreate = {};
+	pipelineCreate.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR;
+	pipelineCreate.pNext = VK_NULL_HANDLE;
+	pipelineCreate.colorAttachmentCount = 1;
+	pipelineCreate.pColorAttachmentFormats = &colorFormat;
+	pipelineCreate.depthAttachmentFormat = depthFormat;
+	pipelineCreate.stencilAttachmentFormat = VK_FORMAT_UNDEFINED;
+
+	VkGraphicsPipelineCreateInfo pipelineInfo = {};
 	pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+	pipelineInfo.pNext = &pipelineCreate;
 	pipelineInfo.stageCount = 2;
 	pipelineInfo.pStages = shaderStages;
 
@@ -149,7 +159,7 @@ SPoVulkanPipelineState NPoVulkanPipelineBehavior::init(SPoVulkanPipelineResource
 	pipelineInfo.pDynamicState = &dynamicState;
 	pipelineInfo.layout = outResources.mPipelineLayout;
 
-	pipelineInfo.renderPass = renderPass;
+	pipelineInfo.renderPass = VK_NULL_HANDLE;
 	pipelineInfo.subpass = 0;
 	pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 	pipelineInfo.basePipelineIndex = -1;

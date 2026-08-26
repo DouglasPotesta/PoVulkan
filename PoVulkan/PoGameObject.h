@@ -10,7 +10,6 @@
 
 struct SPoGameObjectSettings
 {
-
 };
 
 struct SPoGameObjectState
@@ -18,6 +17,8 @@ struct SPoGameObjectState
 	SPoTransform mTransform;
 	glm::vec3 mVelocity = { 0.0f, 0.0f, 0.0f };
 	VkDevice mDevice = VK_NULL_HANDLE;
+	// this is used to help identify which group it renders with
+	VkPipeline mPipeline = VK_NULL_HANDLE;
 	
 };
 

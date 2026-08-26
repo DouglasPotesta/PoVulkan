@@ -21,8 +21,8 @@ struct SPoAppState
 struct SPoAppResources
 {
 	std::vector<SPoWindowResources> mWindows;
-	SPoVulkanResources mVulkan;
-	SPoVulkanDeviceResources mDevice;
+	SPoVulkanResources mVulkan = {};
+	SPoVulkanDeviceResources mDevice = {};
 };
 
 namespace NPoAppBehavior

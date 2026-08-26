@@ -53,7 +53,6 @@ struct SPoVulkanWindowResources
 {
 	VkSurfaceKHR mSurface = VK_NULL_HANDLE;
 	SPoVulkanSwapchainResources mSwapchain;
-	VkRenderPass mRenderPass = VK_NULL_HANDLE;
 	VkDescriptorSetLayout mDescriptorSetLayout = VK_NULL_HANDLE;
 	VkPipelineLayout mPipelineLayout = VK_NULL_HANDLE;
 	VkPipeline mGraphicsPipeline = VK_NULL_HANDLE;
@@ -69,7 +68,8 @@ struct SPoVulkanWindowResources
 struct SPoVulkanDeviceSettings
 {
 	std::vector<const char *> mDeviceExtensions = {
-		VK_KHR_SWAPCHAIN_EXTENSION_NAME
+		VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+		VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME
 	};
 
 	SPoTextureSettings mTexture;
@@ -78,6 +78,8 @@ struct SPoVulkanDeviceSettings
 	SPoVulkanWindowSettings mWindowsSettings;
 	SPoSlangSettings mSlang;
 	SPoVulkanPipelineSettings mPipeline;
+	std::string mCachePath = "shaders/pipelines.cache";
+
 };
 
 struct SPoVulkanDeviceState
@@ -112,6 +114,7 @@ struct SPoVulkanDeviceResources
 	std::vector<SPoVulkanWindowResources> mWindowResourcesVector;
 	SPoSlangResources mSlang;
 	SPoVulkanPipelineResources mPipeline;
+	VkPipelineCache mCache;
 };
 
 namespace NPoVulkanDeviceBehavior

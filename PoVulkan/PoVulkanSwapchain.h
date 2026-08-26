@@ -53,7 +53,6 @@ struct SPoVulkanSwapchainResources
 	VkImage mDepthImage = VK_NULL_HANDLE;
 	VkDeviceMemory mDepthImageMemory = VK_NULL_HANDLE;
 	VkImageView mDepthImageView = VK_NULL_HANDLE;
-	std::vector<VkFramebuffer> mFrameBuffers = {};
 };
 
 namespace NPoVulkanSwapchainBehavior
@@ -61,7 +60,7 @@ namespace NPoVulkanSwapchainBehavior
 	SSwapchainSupportDetails query_swap_chain_support(VkSurfaceKHR surface, VkPhysicalDevice device);
 	VkExtent2D choose_swap_extent(GLFWwindow *pWindow, VkSurfaceCapabilitiesKHR const &capabilities);
 	VkSurfaceFormatKHR choose_swap_surface_format(const std::vector<VkSurfaceFormatKHR> &availableFormats);
-	SPoVulkanSwapchainState init(SPoVulkanSwapchainResources &outResources, VkSurfaceKHR surface, VkDevice device, VkCommandPool commandPool, VkQueue graphicsQueue, VkRenderPass renderPass,
+	SPoVulkanSwapchainState init(SPoVulkanSwapchainResources &outResources, VkSurfaceKHR surface, VkDevice device, VkCommandPool commandPool, VkQueue graphicsQueue,
 		SPoVulkanSwapchainSettings const &settings, SSwapchainSupportDetails const &supportDetails, SQueueFamilyIndices const &indices, 
 		VkExtent2D const &extent, VkSurfaceFormatKHR const surfaceFormat, VkFormat const depthFormat, VkSampleCountFlagBits const msaaCount, VkPhysicalDeviceMemoryProperties const &memoryProperties);
 	void cleanup(SPoVulkanSwapchainResources &inOutResources, SPoVulkanSwapchainState &inOutState, SPoVulkanSwapchainSettings const &settings);

@@ -26,6 +26,6 @@ struct SPoVulkanPipelineResources
 
 namespace NPoVulkanPipelineBehavior
 {
-	SPoVulkanPipelineState init(SPoVulkanPipelineResources &outResources, SPoVulkanPipelineSettings const &settings, VkDevice device, VkDescriptorSetLayout descriptorSetLayout, VkRenderPass renderPass, VkExtent2D const &extent, VkSampleCountFlagBits const msaaSamples, SPoSlangState const &slangState, SPoSlangResources &slangResources);
+	SPoVulkanPipelineState init(SPoVulkanPipelineResources &outResources, SPoVulkanPipelineSettings const &settings, VkDevice device, VkDescriptorSetLayout descriptorSetLayout, VkExtent2D const &extent, VkSampleCountFlagBits const msaaSamples, SPoSlangState const &slangState, SPoSlangResources &slangResources, VkFormat const colorFormat, VkFormat const depthFormat);
 	void cleanup(SPoVulkanPipelineResources &inOutResources, SPoVulkanPipelineState &inOutState, SPoVulkanPipelineSettings const &settings);
 }
