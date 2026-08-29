@@ -3,6 +3,7 @@
 #include "PoWindow.h"
 #include "PoVulkan.h"
 #include "PoVulkanDevice.h"
+#include "PoGame.h"
 
 struct SPoAppSettings
 {
@@ -13,6 +14,7 @@ struct SPoAppSettings
 
 struct SPoAppState
 {
+	std::vector<SPoGameState> mGames;
 	std::vector<SPoWindowState> mWindows;
 	SPoVulkanState mVulkan;
 	SPoVulkanDeviceState mDevice;

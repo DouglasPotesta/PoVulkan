@@ -8,6 +8,7 @@
 #include "PoWindow.h"
 #include "PoSlang.h"
 #include "PoVulkanPipeline.h"
+#include "PoGui.h"
 
 #include <array>
 #include <vector>
@@ -35,7 +36,7 @@ struct SPoVulkanWindowSettings
 {
 	SPoVulkanSwapchainSettings mSwapchain;
 	std::array<SPoGameObjectSettings, NPoGameObjectBehavior::gk_max_game_objects> mGameObjects;
-
+	SPoGuiSettings mGui;
 };
 
 struct SPoVulkanWindowState
@@ -47,6 +48,7 @@ struct SPoVulkanWindowState
 	bool mFramebufferResized = false;
 	SSwapchainSupportDetails mSwapchainSupportDetails = {};
 	SPoWindowId mUniqueId = {};
+	SPoGuiState mGui = {};
 };
 
 struct SPoVulkanWindowResources
@@ -63,6 +65,7 @@ struct SPoVulkanWindowResources
 	std::vector<VkSemaphore> mRenderFinishedSemaphores;
 	std::vector<VkFence> mInFlightFences;
 	std::array<SPoGameObjectResources, NPoGameObjectBehavior::gk_max_game_objects> mGameObjects;
+	SPoGuiResources mGui = {};
 };
 
 struct SPoVulkanDeviceSettings
@@ -124,9 +127,15 @@ namespace NPoVulkanDeviceBehavior
 	void create_image(VkImage &outImage, VkDeviceMemory &outImageMemory, VkDevice logicalDevice, uint32_t width, uint32_t height, uint32_t mipLevels, VkSampleCountFlagBits numSamples, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage,
 		VkMemoryPropertyFlags properties, VkPhysicalDeviceMemoryProperties const &memoryProperties);
 	VkImageView create_image_view(VkDevice device, VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, uint32_t mipLevels);
+	
+	void transition_image_layout_command(VkCommandBuffer commandBuffer, VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipLevels);
 	void transition_image_layout(VkDevice device, VkCommandPool commandPool, VkQueue graphicsQueue, VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipLevels);
 
 
+	void begin_command_buffer(VkCommandBuffer commandBuffer, VkCommandBufferUsageFlags const flags);
+	void begin_rendering(VkCommandBuffer commandBuffer, VkImage swapChainResolveImage, VkImage swapChainColorImage, VkImageView swapChainResolveImageView, VkImageView swapChainColorImageView, VkImageView swapChainDepthImageView, VkExtent2D const extent, VkFormat const colorFormat, VkClearValue const *pColorClear, VkClearValue const *pDepthClear);
+
+	void create_command_buffers(std::vector<VkCommandBuffer> &outCommandBuffers, VkDevice device, VkCommandPool commandPool, int const imageCount);
 	void create_buffer(VkBuffer &inOutBuffer, VkDeviceMemory &inOutBufferMemory, VkDevice device, VkDeviceSize const size, VkBufferUsageFlags const usage, VkMemoryPropertyFlags const properties, VkPhysicalDeviceMemoryProperties const &memoryProperties);
 	void copy_buffer_to_image(VkImage image, VkBuffer buffer, VkDevice device, VkCommandPool commandPool, VkQueue graphicsQueue, uint32_t const width, uint32_t const height);
 	void generate_mipmaps(VkImage image, VkDevice device, VkPhysicalDevice physicalDevice, VkCommandPool commandPool, VkQueue graphicsQueue,

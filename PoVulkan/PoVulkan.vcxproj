@@ -104,7 +104,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\VulkanSDK\1.4.350.0\Include;C:\Users\dpola\Documents\Visual Studio 2022\Libraries\tinyobjloader;C:\Users\dpola\Documents\Visual Studio 2022\Libraries\stb;C:\Users\dpola\Documents\Visual Studio 2022\Libraries\glm;C:\Users\dpola\Documents\Visual Studio 2022\Libraries\glfw-3.4.bin.WIN64\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)PoVulkan\thirdparty\imgui;C:\VulkanSDK\1.4.350.0\Include;C:\Users\dpola\Documents\Visual Studio 2022\Libraries\tinyobjloader;C:\Users\dpola\Documents\Visual Studio 2022\Libraries\stb;C:\Users\dpola\Documents\Visual Studio 2022\Libraries\glm;C:\Users\dpola\Documents\Visual Studio 2022\Libraries\glfw-3.4.bin.WIN64\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
@@ -122,7 +122,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\VulkanSDK\1.4.350.0\Include;C:\Users\dpola\Documents\Visual Studio 2022\Libraries\tinyobjloader;C:\Users\dpola\Documents\Visual Studio 2022\Libraries\stb;C:\Users\dpola\Documents\Visual Studio 2022\Libraries\glm;C:\Users\dpola\Documents\Visual Studio 2022\Libraries\glfw-3.4.bin.WIN64\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)PoVulkan\thirdparty\imgui;C:\VulkanSDK\1.4.350.0\Include;C:\Users\dpola\Documents\Visual Studio 2022\Libraries\tinyobjloader;C:\Users\dpola\Documents\Visual Studio 2022\Libraries\stb;C:\Users\dpola\Documents\Visual Studio 2022\Libraries\glm;C:\Users\dpola\Documents\Visual Studio 2022\Libraries\glfw-3.4.bin.WIN64\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
@@ -137,7 +137,9 @@
   <ItemGroup>
     <ClCompile Include="main.cpp" />
     <ClCompile Include="PoApp.cpp" />
+    <ClCompile Include="PoGame.cpp" />
     <ClCompile Include="PoGameObject.cpp" />
+    <ClCompile Include="PoGui.cpp" />
     <ClCompile Include="PoMesh.cpp" />
     <ClCompile Include="PoSlang.cpp" />
     <ClCompile Include="PoTexture.cpp" />
@@ -148,14 +150,22 @@
     <ClCompile Include="PoVulkanUniform.cpp" />
     <ClCompile Include="PoWindow.cpp" />
     <ClCompile Include="PoVulkanShader.cpp" />
+    <ClCompile Include="thirdparty\imgui\imgui.cpp" />
+    <ClCompile Include="thirdparty\imgui\imgui_draw.cpp" />
+    <ClCompile Include="thirdparty\imgui\imgui_impl_glfw.cpp" />
+    <ClCompile Include="thirdparty\imgui\imgui_impl_vulkan.cpp" />
+    <ClCompile Include="thirdparty\imgui\imgui_tables.cpp" />
+    <ClCompile Include="thirdparty\imgui\imgui_widgets.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="PoApp.h" />
     <ClInclude Include="PoCamera.h" />
     <ClInclude Include="PoEngine.h" />
+    <ClInclude Include="PoGame.h" />
     <ClInclude Include="PoGameObject.h" />
     <ClInclude Include="PoGlfw.h" />
     <ClInclude Include="PoGlm.h" />
+    <ClInclude Include="PoGui.h" />
     <ClInclude Include="PoMaterial.h" />
     <ClInclude Include="PoMath.h" />
     <ClInclude Include="PoMesh.h" />
@@ -172,6 +182,14 @@
     <ClInclude Include="PoTransform.h" />
     <ClInclude Include="PoVulkanShader.h" />
     <ClInclude Include="StaticVector.h" />
+    <ClInclude Include="thirdparty\imgui\imconfig.h" />
+    <ClInclude Include="thirdparty\imgui\imgui.h" />
+    <ClInclude Include="thirdparty\imgui\imgui_impl_glfw.h" />
+    <ClInclude Include="thirdparty\imgui\imgui_impl_vulkan.h" />
+    <ClInclude Include="thirdparty\imgui\imgui_internal.h" />
+    <ClInclude Include="thirdparty\imgui\imstb_rectpack.h" />
+    <ClInclude Include="thirdparty\imgui\imstb_textedit.h" />
+    <ClInclude Include="thirdparty\imgui\imstb_truetype.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\compile_shaders.bat" />
@@ -181,6 +199,7 @@
     <None Include="shaders\simple_shader.vert" />
   </ItemGroup>
   <ItemGroup>
+    <Text Include="thirdparty\imgui\LICENSE.txt" />
     <Text Include="_plan.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

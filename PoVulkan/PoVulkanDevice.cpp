@@ -620,22 +620,6 @@ namespace NPoVulkanDevicePrivate
 		}
 	}
 
-	void create_command_buffers(std::vector<VkCommandBuffer> &outCommandBuffers, VkDevice device, VkCommandPool commandPool, int const imageCount)
-	{
-		outCommandBuffers.resize(imageCount);
-		VkCommandBufferAllocateInfo allocInfo{};
-		allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-		allocInfo.commandPool = commandPool;
-		allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-		allocInfo.commandBufferCount = (uint32_t)outCommandBuffers.size();
-
-		if (vkAllocateCommandBuffers(device, &allocInfo, outCommandBuffers.data()) != VK_SUCCESS)
-		{
-			throw std::runtime_error("failed to allocate command buffers!");
-		}
-	}
-
-
 	void create_sync_objects(std::vector<VkSemaphore> &outImageAvailableSemaphores, std::vector<VkSemaphore> &outRenderFinishedSemaphores, std::vector<VkFence> &outInFlightFences, VkDevice device, int const imageCount)
 	{
 		outImageAvailableSemaphores.resize(imageCount);
@@ -674,94 +658,41 @@ namespace NPoVulkanDevicePrivate
 	(x) createDescriptorSets(inOutResources); => being done via game objects though would like to move it back over here
 	(x) createCommandBuffers(inOutResources);*/
 
-	void transition_image_layout_command(VkCommandBuffer commandBuffer, VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipLevels)
+
+	void draw_scene(VkCommandBuffer commandBuffer, VkPipeline graphicsPipeline, VkPipelineLayout pipelineLayout, 
+		SPoMeshResources const &meshResources,
+		std::array<SPoGameObjectResources, NPoGameObjectBehavior::gk_max_game_objects> &gameObjectsResources,
+		std::array<SPoGameObjectState, NPoGameObjectBehavior::gk_max_game_objects> &gameObjectsState,
+		VkExtent2D const extent, int currentFrame)
 	{
+		vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
 
-		VkImageMemoryBarrier barrier{};
-		barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-		barrier.oldLayout = oldLayout;
-		barrier.newLayout = newLayout;
-		barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		VkBuffer vertexBuffers[] = { meshResources.mVertexBuffer };
+		VkDeviceSize offsets[] = { 0 };
+		vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
+		vkCmdBindIndexBuffer(commandBuffer, meshResources.mIndexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
-		barrier.image = image;
-		barrier.subresourceRange.baseMipLevel = 0;
-		barrier.subresourceRange.levelCount = mipLevels;
-		barrier.subresourceRange.baseArrayLayer = 0;
-		barrier.subresourceRange.layerCount = 1;
+		VkViewport viewport{};
+		viewport.x = 0.0f;
+		viewport.y = 0.0f;
+		viewport.width = static_cast<float>(extent.width);
+		viewport.height = static_cast<float>(extent.height);
+		viewport.minDepth = 0.0f;
+		viewport.maxDepth = 1.0f;
+		vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
 
-		VkPipelineStageFlags sourceStage;
-		VkPipelineStageFlags destinationStage;
+		VkRect2D scissor{};
+		scissor.offset = { 0, 0 };
+		scissor.extent = extent;
+		vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
 
-		if (newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
+		for (int i = 0; i < NPoGameObjectBehavior::gk_max_game_objects; ++i)
 		{
-			barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
 
-			if (has_stencil_component(format))
-			{
-				barrier.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
-			}
+			vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &(gameObjectsResources[i].mDescriptorSets[currentFrame]), 0, nullptr);
+			vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(meshResources.mIndices.size()), 1, 0, 0, 0);
 		}
-		else
-		{
-			barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		}
-
-		if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED &&
-			newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
-		{
-			barrier.srcAccessMask = 0;
-			barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-
-			sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-			destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-		}
-		else if (oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL &&
-			newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
-		{
-			barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-			barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-
-			sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-			destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-		}
-		else if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
-		{
-			barrier.srcAccessMask = 0;
-			barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-
-			sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-			destinationStage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-		}
-		else if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
-		{
-			barrier.srcAccessMask = 0;
-			barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-
-			sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-			destinationStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-		}
-		else if (oldLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR)
-		{
-			barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-			barrier.dstAccessMask = 0;
-
-			sourceStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-			destinationStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-		}
-		else
-		{
-			throw std::runtime_error("unsupported layout transition!");
-		}
-
-		vkCmdPipelineBarrier(
-			commandBuffer,
-			sourceStage, destinationStage,
-			0,
-			0, nullptr,
-			0, nullptr,
-			1, &barrier);
 	}
 
 	void record_dynamic_command_buffer(VkCommandBuffer commandBuffer, int currentFrame,
@@ -772,96 +703,184 @@ namespace NPoVulkanDevicePrivate
 		std::array<SPoGameObjectResources, NPoGameObjectBehavior::gk_max_game_objects> &gameObjectsResources,
 		std::array<SPoGameObjectState, NPoGameObjectBehavior::gk_max_game_objects> &gameObjectsState)
 	{
-		VkCommandBufferBeginInfo beginInfo{};
-		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-		beginInfo.flags = 0;
-		beginInfo.pInheritanceInfo = nullptr;
+		NPoVulkanDeviceBehavior::begin_command_buffer(commandBuffer, /*flags*/0);
 
-		if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS)
-		{
-			throw std::runtime_error("failed to begin recording command buffer!");
-		}
-
-		transition_image_layout_command(commandBuffer, swapChainResolveImage, colorFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 1);
-		transition_image_layout_command(commandBuffer, swapChainColorImage, colorFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 1);
+		NPoVulkanDeviceBehavior::transition_image_layout_command(commandBuffer, swapChainResolveImage, colorFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 1);
+		NPoVulkanDeviceBehavior::transition_image_layout_command(commandBuffer, swapChainColorImage, colorFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 1);
 
 		std::array<VkClearValue, 2> clearValues{};
 		clearValues[0].color = { {0.0f, 0.0f, 0.0f, 1.0f} };
 		clearValues[1].depthStencil = { 1.0f, 0 };
-
-		VkRenderingAttachmentInfo colorAttachmentInfo = {};
-		colorAttachmentInfo.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
-		colorAttachmentInfo.resolveMode = VK_RESOLVE_MODE_AVERAGE_BIT;
-		colorAttachmentInfo.resolveImageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-		colorAttachmentInfo.resolveImageView = swapChainResolveImageView;
-		colorAttachmentInfo.imageView = swapChainColorImageView;
-		colorAttachmentInfo.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-		colorAttachmentInfo.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-		colorAttachmentInfo.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-		colorAttachmentInfo.clearValue = clearValues[0];
-
-		VkRenderingAttachmentInfoKHR depthAttachmentInfo = {};
-		depthAttachmentInfo.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
-		depthAttachmentInfo.resolveMode = VK_RESOLVE_MODE_NONE;
-		depthAttachmentInfo.resolveImageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-		depthAttachmentInfo.resolveImageView = VK_NULL_HANDLE;
-		depthAttachmentInfo.imageView = swapChainDepthImageView;
-		depthAttachmentInfo.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-		depthAttachmentInfo.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-		depthAttachmentInfo.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-		depthAttachmentInfo.clearValue = clearValues[1];
-
-
-		VkRect2D renderArea = VkRect2D{ VkOffset2D{}, swapChainExtent };
-		VkRenderingInfo renderInfo = {};
-		renderInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
-		renderInfo.flags = 0;
-		renderInfo.renderArea = renderArea;
-		renderInfo.layerCount = 1;
-		renderInfo.colorAttachmentCount = 1;
-		renderInfo.pColorAttachments = &colorAttachmentInfo;
-		renderInfo.pDepthAttachment = &depthAttachmentInfo;
-		renderInfo.pStencilAttachment = VK_NULL_HANDLE;
-
-		vkCmdBeginRendering(commandBuffer, &renderInfo);
-
-		vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
-
-
-		VkBuffer vertexBuffers[] = { meshResources.mVertexBuffer };
-		VkDeviceSize offsets[] = { 0 };
-		vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
-		vkCmdBindIndexBuffer(commandBuffer, meshResources.mIndexBuffer, 0, VK_INDEX_TYPE_UINT32);
-
-		VkViewport viewport{};
-		viewport.x = 0.0f;
-		viewport.y = 0.0f;
-		viewport.width = static_cast<float>(swapChainExtent.width);
-		viewport.height = static_cast<float>(swapChainExtent.height);
-		viewport.minDepth = 0.0f;
-		viewport.maxDepth = 1.0f;
-		vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
-
-		VkRect2D scissor{};
-		scissor.offset = { 0, 0 };
-		scissor.extent = swapChainExtent;
-		vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
-		for (int i = 0; i < NPoGameObjectBehavior::gk_max_game_objects; ++i)
-		{
-
-			vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &(gameObjectsResources[i].mDescriptorSets[currentFrame]), 0, nullptr);
-			vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(meshResources.mIndices.size()), 1, 0, 0, 0);
-		}
+		NPoVulkanDeviceBehavior::begin_rendering(commandBuffer, swapChainResolveImage, swapChainColorImage, swapChainResolveImageView, swapChainColorImageView, swapChainDepthImageView, swapChainExtent, colorFormat, &(clearValues[0]), &(clearValues[1]));
+		draw_scene(commandBuffer, graphicsPipeline, pipelineLayout, meshResources, gameObjectsResources, gameObjectsState, swapChainExtent, currentFrame);
 
 		vkCmdEndRendering(commandBuffer);
 
-		transition_image_layout_command(commandBuffer, swapChainResolveImage, colorFormat, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, 1);
+		//NPoVulkanDeviceBehavior::transition_image_layout_command(commandBuffer, swapChainResolveImage, colorFormat, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, 1);
 		if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS)
 		{
 			throw std::runtime_error("failed to record command buffer!");
 		}
 
+		
 	}
+}
+
+
+void NPoVulkanDeviceBehavior::transition_image_layout_command(VkCommandBuffer commandBuffer, VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipLevels)
+{
+	using namespace NPoVulkanDevicePrivate;
+	VkImageMemoryBarrier barrier{};
+	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+	barrier.oldLayout = oldLayout;
+	barrier.newLayout = newLayout;
+	barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+	barrier.image = image;
+	barrier.subresourceRange.baseMipLevel = 0;
+	barrier.subresourceRange.levelCount = mipLevels;
+	barrier.subresourceRange.baseArrayLayer = 0;
+	barrier.subresourceRange.layerCount = 1;
+
+	VkPipelineStageFlags sourceStage;
+	VkPipelineStageFlags destinationStage;
+
+
+	if (newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
+	{
+		barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+
+		if (has_stencil_component(format))
+		{
+			barrier.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+		}
+	}
+	else
+	{
+		barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	}
+
+	if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED &&
+		newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
+	{
+		barrier.srcAccessMask = 0;
+		barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+
+		sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+		destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+	}
+	else if (oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL &&
+		newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+	{
+		barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+		barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+		sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+		destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+	}
+	else if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
+	{
+		barrier.srcAccessMask = 0;
+		barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+
+		sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+		destinationStage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+	}
+	else if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+	{
+		barrier.srcAccessMask = 0;
+		barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
+		sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+		destinationStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+	}
+	else if (oldLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR)
+	{
+		barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+		barrier.dstAccessMask = 0;
+
+		sourceStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+		destinationStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+	}
+	else
+	{
+		throw std::runtime_error("unsupported layout transition!");
+	}
+
+	vkCmdPipelineBarrier(
+		commandBuffer,
+		sourceStage, destinationStage,
+		0,
+		0, nullptr,
+		0, nullptr,
+		1, &barrier);
+}
+
+void NPoVulkanDeviceBehavior::begin_command_buffer(VkCommandBuffer commandBuffer, VkCommandBufferUsageFlags const flags)
+{
+	using namespace NPoVulkanDevicePrivate;
+	VkCommandBufferBeginInfo beginInfo{};
+	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	beginInfo.flags = flags;
+	beginInfo.pInheritanceInfo = nullptr;
+
+	if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS)
+	{
+		throw std::runtime_error("failed to begin recording command buffer!");
+	}
+}
+
+void NPoVulkanDeviceBehavior::begin_rendering(VkCommandBuffer commandBuffer, VkImage swapChainResolveImage, VkImage swapChainColorImage, VkImageView swapChainResolveImageView, VkImageView swapChainColorImageView, VkImageView swapChainDepthImageView, VkExtent2D const extent, VkFormat const colorFormat, VkClearValue const *pColorClear, VkClearValue const *pDepthClear)
+{
+	using namespace NPoVulkanDevicePrivate;
+	transition_image_layout_command(commandBuffer, swapChainResolveImage, colorFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 1);
+	transition_image_layout_command(commandBuffer, swapChainColorImage, colorFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 1);
+	std::array<VkClearValue, 2> clearValues{};
+	clearValues[0].color = { {0.0f, 0.0f, 0.0f, 1.0f} };
+	clearValues[1].depthStencil = { 1.0f, 0 };
+
+	VkRenderingAttachmentInfo colorAttachmentInfo = {};
+	colorAttachmentInfo.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+	colorAttachmentInfo.resolveMode = VK_RESOLVE_MODE_AVERAGE_BIT;
+	colorAttachmentInfo.resolveImageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	colorAttachmentInfo.resolveImageView = swapChainResolveImageView;
+	colorAttachmentInfo.imageView = swapChainColorImageView;
+	colorAttachmentInfo.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	colorAttachmentInfo.loadOp = pColorClear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
+	colorAttachmentInfo.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+	if (pColorClear != nullptr)
+	{
+		colorAttachmentInfo.clearValue = *pColorClear;
+	}
+
+	VkRenderingAttachmentInfoKHR depthAttachmentInfo = {};
+	depthAttachmentInfo.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+	depthAttachmentInfo.resolveMode = VK_RESOLVE_MODE_NONE;
+	depthAttachmentInfo.resolveImageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	depthAttachmentInfo.resolveImageView = VK_NULL_HANDLE;
+	depthAttachmentInfo.imageView = swapChainDepthImageView;
+	depthAttachmentInfo.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+	depthAttachmentInfo.loadOp = pDepthClear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
+	depthAttachmentInfo.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+	if (pDepthClear != nullptr)
+	{
+		depthAttachmentInfo.clearValue = *pDepthClear;
+	}
+
+
+	VkRect2D renderArea = VkRect2D{ VkOffset2D{}, extent };
+	VkRenderingInfo renderInfo = {};
+	renderInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
+	renderInfo.flags = 0;
+	renderInfo.renderArea = renderArea;
+	renderInfo.layerCount = 1;
+	renderInfo.colorAttachmentCount = 1;
+	renderInfo.pColorAttachments = &colorAttachmentInfo;
+	renderInfo.pDepthAttachment = &depthAttachmentInfo;
+	renderInfo.pStencilAttachment = VK_NULL_HANDLE;
+
+	vkCmdBeginRendering(commandBuffer, &renderInfo);
 }
 
 void NPoVulkanDeviceBehavior::transition_image_layout(VkDevice device, VkCommandPool commandPool, VkQueue graphicsQueue, VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipLevels)
@@ -966,6 +985,23 @@ SQueueFamilyIndices NPoVulkanDeviceBehavior::find_queue_families(VkSurfaceKHR su
 		++i;
 	}
 	return indices;
+}
+
+
+
+void NPoVulkanDeviceBehavior::create_command_buffers(std::vector<VkCommandBuffer> &outCommandBuffers, VkDevice device, VkCommandPool commandPool, int const imageCount)
+{
+	outCommandBuffers.resize(imageCount);
+	VkCommandBufferAllocateInfo allocInfo{};
+	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+	allocInfo.commandPool = commandPool;
+	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	allocInfo.commandBufferCount = (uint32_t)outCommandBuffers.size();
+
+	if (vkAllocateCommandBuffers(device, &allocInfo, outCommandBuffers.data()) != VK_SUCCESS)
+	{
+		throw std::runtime_error("failed to allocate command buffers!");
+	}
 }
 
 void NPoVulkanDeviceBehavior::create_buffer(VkBuffer &inOutBuffer, VkDeviceMemory &inOutBufferMemory, VkDevice device, VkDeviceSize const size, VkBufferUsageFlags const usage, VkMemoryPropertyFlags const properties, VkPhysicalDeviceMemoryProperties const &memoryProperties)
@@ -1161,7 +1197,6 @@ SPoVulkanDeviceState NPoVulkanDeviceBehavior::init(SPoVulkanDeviceResources &out
 
 void NPoVulkanDeviceBehavior::cleanup(SPoVulkanDeviceResources &inOutResources, SPoVulkanDeviceState &inOutState, SPoVulkanDeviceSettings const &settings)
 {
-
 	NPoMeshBehavior::cleanup(inOutResources.mMesh, inOutState.mMesh, settings.mMesh);
 
 	NPoTextureBehavior::cleanup(inOutResources.mTexture, inOutState.mTexture, settings.mTexture);
@@ -1224,7 +1259,8 @@ void NPoVulkanDeviceBehavior::recreate_swap_chains_for_resize(SPoVulkanDeviceRes
 void NPoVulkanDeviceBehavior::add_window(SPoVulkanDeviceResources &inOutResources, SPoVulkanDeviceState &inOutState, SPoVulkanDeviceSettings const &settings, GLFWwindow *pWindow)
 {
 	using namespace NPoVulkanDevicePrivate;
-
+	static int sWindowIds = 0;
+	sWindowIds += 1;
 	SPoVulkanWindowSettings const &windowSettings = settings.mWindowsSettings;
 	SPoVulkanWindowState &windowState = inOutState.mWindowStateVector.emplace_back();
 	SPoVulkanWindowResources &windowResources = inOutResources.mWindowResourcesVector.emplace_back();
@@ -1293,6 +1329,8 @@ void NPoVulkanDeviceBehavior::add_window(SPoVulkanDeviceResources &inOutResource
 	create_command_buffers(windowResources.mCommandBuffers, inOutResources.mLogicalDevice, windowResources.mCommandPool, windowState.mSwapchain.mImageCount);
 
 	create_sync_objects(windowResources.mImageAvailableSemaphores, windowResources.mRenderFinishedSemaphores, windowResources.mInFlightFences, inOutResources.mLogicalDevice, windowState.mSwapchain.mImageCount);
+
+	windowState.mGui = NPoGuiBehavior::init(windowResources.mGui, windowSettings.mGui, inOutResources.mLogicalDevice, extent.width, extent.height, pWindow, state.mSurfaceFormat.format, VK_API_VERSION_1_4, state.mInstance, state.mPhysicalDevice, windowResources.mCommandPool, state.mQueueFamilyIndices.graphicsFamily.value(), state.mGraphicsQueue, windowState.mSwapchain.mImageCount, windowState.mSwapchain.mImageCount, state.mMsaaCount, inOutResources.mCache, state.mDepthFormat);
 }
 
 void NPoVulkanDeviceBehavior::close_window(SPoVulkanDeviceResources &inOutResources, SPoVulkanDeviceState &inOutState, SPoVulkanDeviceSettings const &settings, GLFWwindow *pWindow)
@@ -1314,6 +1352,8 @@ void NPoVulkanDeviceBehavior::close_window(SPoVulkanDeviceResources &inOutResour
 	SPoVulkanWindowSettings const &windowSettings = settings.mWindowsSettings;
 	SPoVulkanWindowState &windowState = inOutState.mWindowStateVector[windowIndex];
 	SPoVulkanWindowResources &windowResources = inOutResources.mWindowResourcesVector[windowIndex];
+
+	NPoGuiBehavior::cleanup(windowResources.mGui, windowState.mGui, windowSettings.mGui);
 
 	int const imageCount = windowState.mSwapchain.mImageCount;
 	for (int i = 0; i < windowState.mGameObjects.size(); ++i)
@@ -1389,6 +1429,9 @@ void NPoVulkanDeviceBehavior::draw_window_frames(SPoVulkanDeviceResources &inOut
 			windowResources.mGraphicsPipeline, windowResources.mPipelineLayout, inOutResources.mMesh,
 			windowResources.mGameObjects, windowState.mGameObjects);
 
+		NPoGuiBehavior::draw(windowResources.mGui, windowResources.mSwapchain.mImages[imageIndex], windowResources.mSwapchain.mColorImage,
+			windowResources.mSwapchain.mSwapchainImageViews[imageIndex], windowResources.mSwapchain.mColorImageView, windowResources.mSwapchain.mDepthImageView, windowState.mSwapchain.mExtent, inOutState.mSurfaceFormat.format, imageIndex);
+
 		glm::mat4 view = glm::lookAt(glm::vec3(0.0f, 2.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
 
 		glm::mat4 projection = glm::perspective(glm::radians(45.0f), windowState.mSwapchain.mExtent.width / (float)windowState.mSwapchain.mExtent.height, 0.1f, 10.0f);
@@ -1406,9 +1449,9 @@ void NPoVulkanDeviceBehavior::draw_window_frames(SPoVulkanDeviceResources &inOut
 		submitInfo.waitSemaphoreCount = 1;
 		submitInfo.pWaitSemaphores = waitSemaphores;
 		submitInfo.pWaitDstStageMask = waitStages;
-
-		submitInfo.commandBufferCount = 1;
-		submitInfo.pCommandBuffers = &windowResources.mCommandBuffers[currentFrame];
+		VkCommandBuffer commandBuffers[2] = { windowResources.mCommandBuffers[currentFrame] , windowResources.mGui.mCommandBuffers[currentFrame] };
+		submitInfo.commandBufferCount = 2;
+		submitInfo.pCommandBuffers = commandBuffers;
 
 		VkSemaphore signalSemaphores[] = { windowResources.mRenderFinishedSemaphores[currentFrame] };
 		submitInfo.signalSemaphoreCount = 1;
