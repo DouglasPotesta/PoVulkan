@@ -191,11 +191,12 @@ void NPoGuiBehavior::cleanup(SPoGuiResources &inOutResources, SPoGuiState &inOut
 {
 
     vkFreeCommandBuffers(inOutState.mDevice, inOutState.mCommandPool, static_cast<uint32_t>(inOutResources.mCommandBuffers.size()), inOutResources.mCommandBuffers.data());
-
+    ImGuiContext *pPriorContext = ImGui::GetCurrentContext();
     ImGui::SetCurrentContext(inOutResources.mpContext);
     ImGui_ImplVulkan_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     
+    ImGui::SetCurrentContext(pPriorContext == inOutResources.mpContext ? nullptr : pPriorContext);
     ImGui::DestroyContext(inOutResources.mpContext);
 
     vkDestroyDescriptorPool(inOutState.mDevice, inOutResources.mDescriptorPool, nullptr);

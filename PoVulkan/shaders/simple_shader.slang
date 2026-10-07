@@ -35,7 +35,6 @@ VOut main(Vertex input)
 	return output;
 }
 
-
 uniform Sampler2D texSampler;
 
 [shader("fragment")]

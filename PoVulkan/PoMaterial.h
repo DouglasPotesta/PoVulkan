@@ -171,3 +171,7 @@ struct SPoMaterial
 	bool operator!=(SPoMaterial const &) const = default;
 
 };
+
+namespace NPoMaterialBehavior
+{
+}

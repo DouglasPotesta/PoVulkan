@@ -140,6 +140,7 @@
     <ClCompile Include="PoGame.cpp" />
     <ClCompile Include="PoGameObject.cpp" />
     <ClCompile Include="PoGui.cpp" />
+    <ClCompile Include="PoMaterial.cpp" />
     <ClCompile Include="PoMesh.cpp" />
     <ClCompile Include="PoSlang.cpp" />
     <ClCompile Include="PoTexture.cpp" />
@@ -159,6 +160,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="PoApp.h" />
+    <ClInclude Include="PoBindlessResources.h" />
     <ClInclude Include="PoCamera.h" />
     <ClInclude Include="PoEngine.h" />
     <ClInclude Include="PoGame.h" />
@@ -169,9 +171,12 @@
     <ClInclude Include="PoMaterial.h" />
     <ClInclude Include="PoMath.h" />
     <ClInclude Include="PoMesh.h" />
+    <ClInclude Include="PoReflectionDemo.h" />
     <ClInclude Include="PoResource.h" />
     <ClInclude Include="PoResourceManager.h" />
+    <ClInclude Include="PoShaderCursor.h" />
     <ClInclude Include="PoSlang.h" />
+    <ClInclude Include="PoSlangPipelineLayoutBuilder.h" />
     <ClInclude Include="PoTexture.h" />
     <ClInclude Include="PoVulkan.h" />
     <ClInclude Include="PoVulkanDevice.h" />
@@ -181,6 +186,7 @@
     <ClInclude Include="PoWindow.h" />
     <ClInclude Include="PoTransform.h" />
     <ClInclude Include="PoVulkanShader.h" />
+    <ClInclude Include="shaders\parameter_block_demo.slang" />
     <ClInclude Include="StaticVector.h" />
     <ClInclude Include="thirdparty\imgui\imconfig.h" />
     <ClInclude Include="thirdparty\imgui\imgui.h" />
@@ -192,6 +198,7 @@
     <ClInclude Include="thirdparty\imgui\imstb_truetype.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="shaders\bindless_demo.slang" />
     <None Include="shaders\compile_shaders.bat" />
     <None Include="shaders\simple_shader.frag" />
     <None Include="shaders\simple_shader.geom" />

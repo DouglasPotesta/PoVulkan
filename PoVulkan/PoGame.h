@@ -1,7 +1,7 @@
 #pragma once
 
-#include <functional>
-#include <unordered_map>
+//#include <functional>
+//#include <unordered_map>
 #include <array>
 // for now lets make a game that can pick between a cube and a sphere as its visuals
 // the object can have it's transformation set, objects can be spawned
@@ -13,15 +13,15 @@ struct SPoObjectId
 	bool operator==(SPoObjectId const &) const = default;
 	bool operator!=(SPoObjectId const &) const = default;
 };
-
-template<>
-struct std::hash<SPoObjectId>
-{
-	std::size_t operator()(SPoObjectId const &obj) const noexcept
-	{
-		return obj.mValue;
-	}
-};
+//
+//template<>
+//struct std::hash<SPoObjectId>
+//{
+//	std::size_t operator()(SPoObjectId const &obj) const noexcept
+//	{
+//		return obj.mValue;
+//	}
+//};
 
 struct SPoComponentId
 {
@@ -30,14 +30,14 @@ struct SPoComponentId
 	bool operator!=(SPoComponentId const &) const = default;
 };
 
-template<>
-struct std::hash<SPoComponentId>
-{
-	std::size_t operator()(SPoComponentId const &obj) const noexcept
-	{
-		return obj.mValue;
-	}
-};
+//template<>
+//struct std::hash<SPoComponentId>
+//{
+//	std::size_t operator()(SPoComponentId const &obj) const noexcept
+//	{
+//		return obj.mValue;
+//	}
+//};
 
 enum class EPrimmitive : uint8_t
 {
@@ -84,14 +84,14 @@ struct SPoDirectionalLight
 
 struct SPoScene
 {
-	std::unordered_map<SPoObjectId, SPoPointLight> mPointLights;
-	std::unordered_map<SPoObjectId, SPoPointLight> mDirectionalLights;
-	std::unordered_map<SPoObjectId, SPoCube> mCubes;
-	std::unordered_map<SPoObjectId, SPoSphere> mSpheres;
+	//std::unordered_map<SPoObjectId, SPoPointLight> mPointLights;
+	//std::unordered_map<SPoObjectId, SPoPointLight> mDirectionalLights;
+	//std::unordered_map<SPoObjectId, SPoCube> mCubes;
+	//std::unordered_map<SPoObjectId, SPoSphere> mSpheres;
 
-	std::unordered_map<SPoObjectId, SPoGameMaterial> mMaterials;
+	//std::unordered_map<SPoObjectId, SPoGameMaterial> mMaterials;
 
-	std::unordered_map<SPoObjectId, SPoCamera> mCameras;
+	//std::unordered_map<SPoObjectId, SPoCamera> mCameras;
 };
 
 

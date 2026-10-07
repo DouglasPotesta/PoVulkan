@@ -57,7 +57,6 @@ namespace NPoVulkanPrivate
 		void *pUserData)
 	{
 		std::cerr << "validation layer: " << pCallbackData->pMessage << std::endl;
-		
 		return VK_FALSE;
 	}
 

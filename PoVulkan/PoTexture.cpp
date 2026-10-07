@@ -72,7 +72,6 @@ SPoTextureState NPoTextureBehavior::init(SPoTextureResources &outResources, SPoT
         throw std::runtime_error("The requested mip map creation type is not implemented!");
         break;
     }
-    static VkFormat const skImageFormat = VK_FORMAT_R8G8B8A8_SRGB;
     VkBuffer stagingBuffer;
     VkDeviceMemory stagingBufferMemory;
     NPoVulkanDeviceBehavior::create_buffer(stagingBuffer, stagingBufferMemory, 
@@ -86,9 +85,9 @@ SPoTextureState NPoTextureBehavior::init(SPoTextureResources &outResources, SPoT
 
     stbi_image_free(pPixels);
     NPoVulkanDeviceBehavior::create_image(outResources.mImage, outResources.mImageMemory, device, state.mWidth, state.mHeight, state.mMipLevels, VK_SAMPLE_COUNT_1_BIT,
-        skImageFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+        settings.mImageFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, memoryProperties);
-    NPoVulkanDeviceBehavior::transition_image_layout(device, commandPool, graphicsQueue, outResources.mImage, skImageFormat, VK_IMAGE_LAYOUT_UNDEFINED,
+    NPoVulkanDeviceBehavior::transition_image_layout(device, commandPool, graphicsQueue, outResources.mImage, settings.mImageFormat, VK_IMAGE_LAYOUT_UNDEFINED,
         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, state.mMipLevels);
 
     NPoVulkanDeviceBehavior::copy_buffer_to_image(outResources.mImage, stagingBuffer, device, commandPool, graphicsQueue, static_cast<uint32_t>(state.mWidth), static_cast<uint32_t>(state.mHeight));
@@ -96,12 +95,12 @@ SPoTextureState NPoTextureBehavior::init(SPoTextureResources &outResources, SPoT
         //	VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, mipLevels);
 
     NPoVulkanDeviceBehavior::generate_mipmaps(outResources.mImage, device, physicalDevice, commandPool, graphicsQueue,
-        skImageFormat, state.mWidth, state.mHeight, state.mMipLevels);
+        settings.mImageFormat, state.mWidth, state.mHeight, state.mMipLevels);
 
     vkDestroyBuffer(device, stagingBuffer, nullptr);
     vkFreeMemory(device, stagingBufferMemory, nullptr);
 
-    outResources.mImageView = NPoVulkanDeviceBehavior::create_image_view(device, outResources.mImage, skImageFormat, VK_IMAGE_ASPECT_COLOR_BIT, state.mMipLevels);
+    outResources.mImageView = NPoVulkanDeviceBehavior::create_image_view(device, outResources.mImage, settings.mImageFormat, VK_IMAGE_ASPECT_COLOR_BIT, state.mMipLevels);
     outResources.mSampler = create_texture_sampler(device, physicalDevice);
     return state;
 }

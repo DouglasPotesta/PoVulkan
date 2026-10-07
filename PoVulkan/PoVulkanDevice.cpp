@@ -26,6 +26,8 @@
 *	resources used to help implement : 
 *	https://vulkan-tutorial.com/
 *	https://docs.vulkan.org/tutorial/latest/Building_a_Simple_Engine
+*	https://docs.shader-slang.org/en/stable/parameter-blocks.html
+*	https://shader-slang.org/docs/shader-cursors/
 */
 
 
@@ -342,166 +344,6 @@ namespace NPoVulkanDevicePrivate
 			throw std::runtime_error("failed to create shader module!");
 		}
 		return shaderModule;
-	}
-
-	void create_dynamic_graphics_pipeline(VkPipelineLayout &outPipelineLayout, VkPipeline &outGraphicsPipeline, 
-		VkPipelineCache cache, VkDevice device, VkDescriptorSetLayout descriptorSetLayout,
-		SPoSlangState const &slangState, SPoSlangResources &slangResources, 
-		VkSampleCountFlagBits const msaaSamples, VkFormat const colorFormat, VkFormat const depthFormat)
-	{
-		VkShaderModule slangVert;
-		VkShaderModule slangFrag;
-		NPoSlangBehavior::get_current_shaders(slangVert, slangFrag, slangState, slangResources);
-
-		VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
-		vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-		vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
-		vertShaderStageInfo.module = slangVert;
-		vertShaderStageInfo.pName = "main";
-
-		VkPipelineShaderStageCreateInfo fragShaderStageInfo{};
-		fragShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-		fragShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-		fragShaderStageInfo.module = slangFrag;
-		fragShaderStageInfo.pName = "main";
-
-		VkPipelineShaderStageCreateInfo shaderStages[] = { vertShaderStageInfo, fragShaderStageInfo };
-
-		std::vector<VkDynamicState> dynamicStates = {
-			VK_DYNAMIC_STATE_VIEWPORT,
-			VK_DYNAMIC_STATE_SCISSOR
-		};
-
-		VkPipelineDynamicStateCreateInfo dynamicState{};
-		dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-		dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
-		dynamicState.pDynamicStates = dynamicStates.data();
-
-		auto bindingDescription = Vertex::getBindingDescription();
-		auto attributeDescriptions = Vertex::getAttributeDescriptions();
-
-		VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
-		vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-		vertexInputInfo.vertexBindingDescriptionCount = 1;
-		vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
-		vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
-		vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
-
-		VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
-		inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-		inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-		inputAssembly.primitiveRestartEnable = VK_FALSE;
-
-		VkPipelineViewportStateCreateInfo viewportState{};
-		viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-		viewportState.viewportCount = 1;
-		viewportState.scissorCount = 1;
-		// can be null since it's set to dynamic
-		// means we do not have to recreate all pipelines for all possible dimensions
-		viewportState.pViewports = nullptr;
-		viewportState.pScissors = nullptr;
-
-		VkPipelineRasterizationStateCreateInfo rasterizer{};
-		rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-		rasterizer.depthClampEnable = VK_FALSE;
-		rasterizer.rasterizerDiscardEnable = VK_FALSE;
-		rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
-		rasterizer.lineWidth = 1.0f;
-		rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
-		rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
-		rasterizer.depthBiasEnable = VK_FALSE;
-		rasterizer.depthBiasConstantFactor = 0.0;
-		rasterizer.depthBiasClamp = 0.0f;
-		rasterizer.depthBiasSlopeFactor = 0.0f;
-
-		VkPipelineMultisampleStateCreateInfo multisampling{};
-		multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-		multisampling.sampleShadingEnable = VK_TRUE;
-		multisampling.rasterizationSamples = msaaSamples;
-		multisampling.minSampleShading = 0.2f;
-		multisampling.pSampleMask = nullptr;
-		multisampling.alphaToCoverageEnable = VK_FALSE;
-		multisampling.alphaToOneEnable = VK_FALSE;
-
-		VkPipelineDepthStencilStateCreateInfo depthStencil{};
-		depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-		depthStencil.depthTestEnable = VK_TRUE;
-		depthStencil.depthWriteEnable = VK_TRUE;
-		depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
-		depthStencil.depthBoundsTestEnable = VK_FALSE;
-		depthStencil.minDepthBounds = 0.0f;
-		depthStencil.maxDepthBounds = 1.0f;
-		depthStencil.stencilTestEnable = VK_FALSE;
-		depthStencil.front = {};
-		depthStencil.back = {};
-
-		VkPipelineColorBlendAttachmentState colorBlendAttachment{};
-		colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-		colorBlendAttachment.blendEnable = VK_FALSE;
-		colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
-		colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO;
-		colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
-		colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-		colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
-		colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
-
-		VkPipelineColorBlendStateCreateInfo colorBlending{};
-		colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-		colorBlending.logicOpEnable = VK_FALSE;
-		colorBlending.logicOp = VK_LOGIC_OP_COPY;
-		colorBlending.attachmentCount = 1;
-		colorBlending.pAttachments = &colorBlendAttachment;
-		colorBlending.blendConstants[0] = 0.0f;
-		colorBlending.blendConstants[1] = 0.0f;
-		colorBlending.blendConstants[2] = 0.0f;
-		colorBlending.blendConstants[3] = 0.0f;
-
-		VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
-		pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-		pipelineLayoutInfo.setLayoutCount = 1;
-		pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
-		pipelineLayoutInfo.pushConstantRangeCount = 0;
-		pipelineLayoutInfo.pPushConstantRanges = nullptr;
-
-		if (vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &outPipelineLayout) != VK_SUCCESS)
-		{
-			throw std::runtime_error("failed to create pipeline layout!");
-		}
-
-		// Provide information for dynamic rendering
-		VkPipelineRenderingCreateInfo pipelineCreate = {};
-		pipelineCreate.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR;
-		pipelineCreate.pNext = VK_NULL_HANDLE;
-		pipelineCreate.colorAttachmentCount = 1;
-		pipelineCreate.pColorAttachmentFormats = &colorFormat;
-		pipelineCreate.depthAttachmentFormat = depthFormat;
-		pipelineCreate.stencilAttachmentFormat = VK_FORMAT_UNDEFINED;
-
-		VkGraphicsPipelineCreateInfo pipelineInfo = {};
-		pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-		pipelineInfo.pNext = &pipelineCreate;
-		pipelineInfo.stageCount = 2;
-		pipelineInfo.pStages = shaderStages;
-
-		pipelineInfo.pVertexInputState = &vertexInputInfo;
-		pipelineInfo.pInputAssemblyState = &inputAssembly;
-		pipelineInfo.pViewportState = &viewportState;
-		pipelineInfo.pRasterizationState = &rasterizer;
-		pipelineInfo.pMultisampleState = &multisampling;
-		pipelineInfo.pDepthStencilState = &depthStencil;
-		pipelineInfo.pColorBlendState = &colorBlending;
-		pipelineInfo.pDynamicState = &dynamicState;
-		pipelineInfo.layout = outPipelineLayout;
-
-		pipelineInfo.renderPass = VK_NULL_HANDLE;
-		pipelineInfo.subpass = 0;
-		pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
-		pipelineInfo.basePipelineIndex = -1;
-
-		if (vkCreateGraphicsPipelines(device, cache, 1, &pipelineInfo, nullptr, &outGraphicsPipeline) != VK_SUCCESS)
-		{
-			throw std::runtime_error("failed to create graphics pipeline");
-		}
 	}
 
 	void create_command_pool(VkCommandPool &outCommandPool, VkDevice device, SQueueFamilyIndices const &indices)
@@ -868,7 +710,6 @@ void NPoVulkanDeviceBehavior::begin_rendering(VkCommandBuffer commandBuffer, VkI
 		depthAttachmentInfo.clearValue = *pDepthClear;
 	}
 
-
 	VkRect2D renderArea = VkRect2D{ VkOffset2D{}, extent };
 	VkRenderingInfo renderInfo = {};
 	renderInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
@@ -883,6 +724,167 @@ void NPoVulkanDeviceBehavior::begin_rendering(VkCommandBuffer commandBuffer, VkI
 	vkCmdBeginRendering(commandBuffer, &renderInfo);
 }
 
+
+void NPoVulkanDeviceBehavior::create_dynamic_graphics_pipeline(VkPipelineLayout &outPipelineLayout, VkPipeline &outGraphicsPipeline,
+	VkPipelineCache cache, VkDevice device, VkDescriptorSetLayout descriptorSetLayout,
+	SPoSlangState const &slangState, SPoSlangResources &slangResources, char const *pShaderFile,
+	VkSampleCountFlagBits const msaaSamples, VkFormat const colorFormat, VkFormat const depthFormat)
+{
+	VkShaderModule slangVert;
+	VkShaderModule slangFrag;
+	NPoSlangBehavior::get_current_shaders(slangVert, slangFrag, slangState, slangResources, pShaderFile);
+
+	VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
+	vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+	vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
+	vertShaderStageInfo.module = slangVert;
+	vertShaderStageInfo.pName = "main";
+
+	VkPipelineShaderStageCreateInfo fragShaderStageInfo{};
+	fragShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+	fragShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+	fragShaderStageInfo.module = slangFrag;
+	fragShaderStageInfo.pName = "main";
+
+	VkPipelineShaderStageCreateInfo shaderStages[] = { vertShaderStageInfo, fragShaderStageInfo };
+
+	std::vector<VkDynamicState> dynamicStates = {
+		VK_DYNAMIC_STATE_VIEWPORT,
+		VK_DYNAMIC_STATE_SCISSOR
+	};
+
+	VkPipelineDynamicStateCreateInfo dynamicState{};
+	dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+	dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
+	dynamicState.pDynamicStates = dynamicStates.data();
+
+	auto bindingDescription = Vertex::getBindingDescription();
+	auto attributeDescriptions = Vertex::getAttributeDescriptions();
+
+	VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
+	vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+	vertexInputInfo.vertexBindingDescriptionCount = 1;
+	vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
+	vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
+	vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
+
+	VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
+	inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+	inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+	inputAssembly.primitiveRestartEnable = VK_FALSE;
+
+	VkPipelineViewportStateCreateInfo viewportState{};
+	viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+	viewportState.viewportCount = 1;
+	viewportState.scissorCount = 1;
+	// can be null since it's set to dynamic
+	// means we do not have to recreate all pipelines for all possible dimensions
+	viewportState.pViewports = nullptr;
+	viewportState.pScissors = nullptr;
+
+	VkPipelineRasterizationStateCreateInfo rasterizer{};
+	rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+	rasterizer.depthClampEnable = VK_FALSE;
+	rasterizer.rasterizerDiscardEnable = VK_FALSE;
+	rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
+	rasterizer.lineWidth = 1.0f;
+	rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
+	rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+	rasterizer.depthBiasEnable = VK_FALSE;
+	rasterizer.depthBiasConstantFactor = 0.0;
+	rasterizer.depthBiasClamp = 0.0f;
+	rasterizer.depthBiasSlopeFactor = 0.0f;
+
+	VkPipelineMultisampleStateCreateInfo multisampling{};
+	multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+	multisampling.sampleShadingEnable = VK_TRUE;
+	multisampling.rasterizationSamples = msaaSamples;
+	multisampling.minSampleShading = 0.2f;
+	multisampling.pSampleMask = nullptr;
+	multisampling.alphaToCoverageEnable = VK_FALSE;
+	multisampling.alphaToOneEnable = VK_FALSE;
+
+	VkPipelineDepthStencilStateCreateInfo depthStencil{};
+	depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+	depthStencil.depthTestEnable = VK_TRUE;
+	depthStencil.depthWriteEnable = VK_TRUE;
+	depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
+	depthStencil.depthBoundsTestEnable = VK_FALSE;
+	depthStencil.minDepthBounds = 0.0f;
+	depthStencil.maxDepthBounds = 1.0f;
+	depthStencil.stencilTestEnable = VK_FALSE;
+	depthStencil.front = {};
+	depthStencil.back = {};
+
+	VkPipelineColorBlendAttachmentState colorBlendAttachment{};
+	colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+	colorBlendAttachment.blendEnable = VK_FALSE;
+	colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
+	colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO;
+	colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
+	colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+	colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+	colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
+
+	VkPipelineColorBlendStateCreateInfo colorBlending{};
+	colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+	colorBlending.logicOpEnable = VK_FALSE;
+	colorBlending.logicOp = VK_LOGIC_OP_COPY;
+	colorBlending.attachmentCount = 1;
+	colorBlending.pAttachments = &colorBlendAttachment;
+	colorBlending.blendConstants[0] = 0.0f;
+	colorBlending.blendConstants[1] = 0.0f;
+	colorBlending.blendConstants[2] = 0.0f;
+	colorBlending.blendConstants[3] = 0.0f;
+
+	VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
+	pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+	pipelineLayoutInfo.setLayoutCount = 1;
+	pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
+	pipelineLayoutInfo.pushConstantRangeCount = 0;
+	pipelineLayoutInfo.pPushConstantRanges = nullptr;
+
+	if (vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &outPipelineLayout) != VK_SUCCESS)
+	{
+		throw std::runtime_error("failed to create pipeline layout!");
+	}
+
+	// Provide information for dynamic rendering
+	VkPipelineRenderingCreateInfo pipelineCreate = {};
+	pipelineCreate.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR;
+	pipelineCreate.pNext = VK_NULL_HANDLE;
+	pipelineCreate.colorAttachmentCount = 1;
+	pipelineCreate.pColorAttachmentFormats = &colorFormat;
+	pipelineCreate.depthAttachmentFormat = depthFormat;
+	pipelineCreate.stencilAttachmentFormat = VK_FORMAT_UNDEFINED;
+
+	VkGraphicsPipelineCreateInfo pipelineInfo = {};
+	pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+	pipelineInfo.pNext = &pipelineCreate;
+	pipelineInfo.stageCount = 2;
+	pipelineInfo.pStages = shaderStages;
+
+	pipelineInfo.pVertexInputState = &vertexInputInfo;
+	pipelineInfo.pInputAssemblyState = &inputAssembly;
+	pipelineInfo.pViewportState = &viewportState;
+	pipelineInfo.pRasterizationState = &rasterizer;
+	pipelineInfo.pMultisampleState = &multisampling;
+	pipelineInfo.pDepthStencilState = &depthStencil;
+	pipelineInfo.pColorBlendState = &colorBlending;
+	pipelineInfo.pDynamicState = &dynamicState;
+	pipelineInfo.layout = outPipelineLayout;
+
+	pipelineInfo.renderPass = VK_NULL_HANDLE;
+	pipelineInfo.subpass = 0;
+	pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
+	pipelineInfo.basePipelineIndex = -1;
+
+	if (vkCreateGraphicsPipelines(device, cache, 1, &pipelineInfo, nullptr, &outGraphicsPipeline) != VK_SUCCESS)
+	{
+		throw std::runtime_error("failed to create graphics pipeline");
+	}
+}
+
 void NPoVulkanDeviceBehavior::transition_image_layout(VkDevice device, VkCommandPool commandPool, VkQueue graphicsQueue, VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipLevels)
 {
 	using namespace NPoVulkanDevicePrivate;
@@ -890,7 +892,6 @@ void NPoVulkanDeviceBehavior::transition_image_layout(VkDevice device, VkCommand
 	transition_image_layout_command(commandBuffer, image, format, oldLayout, newLayout, mipLevels);
 	end_single_time_commands(commandBuffer, device, commandPool, graphicsQueue);
 }
-
 
 void NPoVulkanDeviceBehavior::create_image(VkImage &outImage, VkDeviceMemory &outImageMemory, VkDevice logicalDevice, uint32_t width, uint32_t height, uint32_t mipLevels, VkSampleCountFlagBits numSamples, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage,
 	VkMemoryPropertyFlags properties, VkPhysicalDeviceMemoryProperties const &memoryProperties)
@@ -957,8 +958,6 @@ VkImageView NPoVulkanDeviceBehavior::create_image_view(VkDevice device, VkImage 
 	return imageView;
 }
 
-
-
 SQueueFamilyIndices NPoVulkanDeviceBehavior::find_queue_families(VkSurfaceKHR surface, VkPhysicalDevice device)
 {
 	SQueueFamilyIndices indices;
@@ -986,8 +985,6 @@ SQueueFamilyIndices NPoVulkanDeviceBehavior::find_queue_families(VkSurfaceKHR su
 	}
 	return indices;
 }
-
-
 
 void NPoVulkanDeviceBehavior::create_command_buffers(std::vector<VkCommandBuffer> &outCommandBuffers, VkDevice device, VkCommandPool commandPool, int const imageCount)
 {
@@ -1248,11 +1245,17 @@ void NPoVulkanDeviceBehavior::recreate_swap_chains_for_resize(SPoVulkanDeviceRes
 		SPoVulkanWindowResources &windowResources = inOutResources.mWindowResourcesVector[windowIndex];
 		SPoVulkanWindowSettings const &windowSettings = settings.mWindowsSettings;
 		windowState.mSwapchainSupportDetails = NPoVulkanSwapchainBehavior::query_swap_chain_support(windowResources.mSurface, inOutState.mPhysicalDevice);
+		NPoGuiBehavior::cleanup(windowResources.mGui, windowState.mGui, windowSettings.mGui);
 		NPoVulkanSwapchainBehavior::cleanup(windowResources.mSwapchain, windowState.mSwapchain, windowSettings.mSwapchain);
 
 		VkExtent2D const &extent = NPoVulkanSwapchainBehavior::choose_swap_extent(windowState.mpWindow, windowState.mSwapchainSupportDetails.mCapabilities);
 		windowState.mSwapchain = NPoVulkanSwapchainBehavior::init(windowResources.mSwapchain, windowResources.mSurface, inOutResources.mLogicalDevice, windowResources.mCommandPool, inOutState.mGraphicsQueue,
 			windowSettings.mSwapchain, windowState.mSwapchainSupportDetails, inOutState.mQueueFamilyIndices, extent, inOutState.mSurfaceFormat, inOutState.mDepthFormat, inOutState.mMsaaCount, inOutState.mMemoryProperties);
+		windowState.mGui = NPoGuiBehavior::init(windowResources.mGui, windowSettings.mGui, inOutResources.mLogicalDevice, 
+			extent.width, extent.height, pWindow, inOutState.mSurfaceFormat.format, VK_API_VERSION_1_4, inOutState.mInstance, 
+			inOutState.mPhysicalDevice, windowResources.mCommandPool, inOutState.mQueueFamilyIndices.graphicsFamily.value(), 
+			inOutState.mGraphicsQueue, windowState.mSwapchain.mImageCount, windowState.mSwapchain.mImageCount, 
+			inOutState.mMsaaCount, inOutResources.mCache, inOutState.mDepthFormat);
 	}
 }
 
@@ -1308,8 +1311,8 @@ void NPoVulkanDeviceBehavior::add_window(SPoVulkanDeviceResources &inOutResource
 	* void draw()
 	* for pipeline in pipelines => for object in pipeline.gameobject_draws => draw(pipeline, object)
 	*/
-	
-	create_dynamic_graphics_pipeline(windowResources.mPipelineLayout, windowResources.mGraphicsPipeline, inOutResources.mCache, inOutResources.mLogicalDevice, windowResources.mDescriptorSetLayout, state.mSlang, inOutResources.mSlang, 
+	windowState.mPipeline = NPoVulkanPipelineBehavior::init(windowResources.mPipeline, windowSettings.mPipeline, inOutResources.mCache, inOutResources.mLogicalDevice, windowResources.mDescriptorSetLayout,
+		inOutState.mSlang, inOutResources.mSlang, settings.mSlang.mSlangDefaultShader,
 		state.mMsaaCount, state.mSurfaceFormat.format, state.mDepthFormat);
 	VkExtent2D const extent = NPoVulkanSwapchainBehavior::choose_swap_extent(pWindow, windowState.mSwapchainSupportDetails.mCapabilities);
 	windowState.mSwapchain = NPoVulkanSwapchainBehavior::init(windowResources.mSwapchain, windowResources.mSurface, inOutResources.mLogicalDevice, windowResources.mCommandPool, state.mGraphicsQueue,
@@ -1318,7 +1321,7 @@ void NPoVulkanDeviceBehavior::add_window(SPoVulkanDeviceResources &inOutResource
 	std::vector<VkDescriptorSetLayout> layouts(windowState.mSwapchain.mImageCount, windowResources.mDescriptorSetLayout);
 
 	// hard coded game objects not a big deal for now we'll figure out the structure later
-	// TODO : Figure out the structure
+	// TODO : Figure out the structure 
 	for (int i = 0; i < windowState.mGameObjects.size(); ++i)
 	{
 		windowState.mGameObjects[i] = NPoGameObjectBehavior::init(windowResources.mGameObjects[i], settings.mWindowsSettings.mGameObjects[i],
@@ -1357,7 +1360,6 @@ void NPoVulkanDeviceBehavior::close_window(SPoVulkanDeviceResources &inOutResour
 
 	int const imageCount = windowState.mSwapchain.mImageCount;
 	for (int i = 0; i < windowState.mGameObjects.size(); ++i)
-	for (int i = 0; i < windowState.mGameObjects.size(); ++i)
 	{
 		NPoGameObjectBehavior::cleanup(windowResources.mGameObjects[i], windowState.mGameObjects[i], settings.mWindowsSettings.mGameObjects[i]);
 	}
@@ -1368,8 +1370,7 @@ void NPoVulkanDeviceBehavior::close_window(SPoVulkanDeviceResources &inOutResour
 
 	vkDestroyDescriptorSetLayout(inOutResources.mLogicalDevice, windowResources.mDescriptorSetLayout, nullptr);
 
-	vkDestroyPipeline(inOutResources.mLogicalDevice, windowResources.mGraphicsPipeline, nullptr);
-	vkDestroyPipelineLayout(inOutResources.mLogicalDevice, windowResources.mPipelineLayout, nullptr);
+	NPoVulkanPipelineBehavior::cleanup(windowResources.mPipeline, windowState.mPipeline, settings.mPipeline);
 
 	for (size_t i = 0; i < imageCount; ++i)
 	{
@@ -1404,7 +1405,6 @@ void NPoVulkanDeviceBehavior::draw_window_frames(SPoVulkanDeviceResources &inOut
 		VkDevice device = inOutResources.mLogicalDevice;
 		vkWaitForFences(inOutResources.mLogicalDevice, 1, &windowResources.mInFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
 
-
 		uint32_t imageIndex;
 		VkResult result = vkAcquireNextImageKHR(device, windowResources.mSwapchain.mSwapchain, UINT64_MAX, windowResources.mImageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
 
@@ -1417,24 +1417,32 @@ void NPoVulkanDeviceBehavior::draw_window_frames(SPoVulkanDeviceResources &inOut
 		{
 			throw std::runtime_error("failed to acquire swap chain image!");
 		}
+		NPoVulkanPipelineBehavior::refresh_pipeline(windowResources.mPipeline, windowState.mPipeline,
+			settings.mPipeline, inOutResources.mCache, inOutResources.mLogicalDevice,
+			windowResources.mDescriptorSetLayout, inOutState.mSlang, inOutResources.mSlang,
+			inOutState.mMsaaCount, inOutState.mSurfaceFormat.format, inOutState.mDepthFormat);
 
 		vkResetFences(device, 1, &windowResources.mInFlightFences[currentFrame]);
 
 		vkResetCommandBuffer(windowResources.mCommandBuffers[currentFrame], 0);
 
+		VkPipeline graphicsPipeline;
+		VkPipelineLayout pipelineLayout;
+		NPoVulkanPipelineBehavior::get_current_pipeline(pipelineLayout, graphicsPipeline, windowResources.mPipeline, windowState.mPipeline);
+
 		record_dynamic_command_buffer(windowResources.mCommandBuffers[currentFrame], currentFrame,
 			windowResources.mSwapchain.mColorImageView, windowResources.mSwapchain.mSwapchainImageViews[imageIndex], windowResources.mSwapchain.mDepthImageView,
 			windowResources.mSwapchain.mColorImage, windowResources.mSwapchain.mImages[imageIndex], 
 			windowState.mSwapchain.mExtent, inOutState.mSurfaceFormat.format,
-			windowResources.mGraphicsPipeline, windowResources.mPipelineLayout, inOutResources.mMesh,
+			graphicsPipeline, pipelineLayout, inOutResources.mMesh,
 			windowResources.mGameObjects, windowState.mGameObjects);
 
 		NPoGuiBehavior::draw(windowResources.mGui, windowResources.mSwapchain.mImages[imageIndex], windowResources.mSwapchain.mColorImage,
 			windowResources.mSwapchain.mSwapchainImageViews[imageIndex], windowResources.mSwapchain.mColorImageView, windowResources.mSwapchain.mDepthImageView, windowState.mSwapchain.mExtent, inOutState.mSurfaceFormat.format, imageIndex);
 
 		glm::mat4 view = glm::lookAt(glm::vec3(0.0f, 2.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-
-		glm::mat4 projection = glm::perspective(glm::radians(45.0f), windowState.mSwapchain.mExtent.width / (float)windowState.mSwapchain.mExtent.height, 0.1f, 10.0f);
+		static float sFov = 90.0f;
+		glm::mat4 projection = glm::perspective(glm::radians(sFov), windowState.mSwapchain.mExtent.width / (float)windowState.mSwapchain.mExtent.height, 0.1f, 10.0f);
 		projection[1][1] *= -1.0;
 		for (int i = 0; i < NPoGameObjectBehavior::gk_max_game_objects; ++i)
 		{
@@ -1477,8 +1485,8 @@ void NPoVulkanDeviceBehavior::draw_window_frames(SPoVulkanDeviceResources &inOut
 
 		if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || windowState.mFramebufferResized)
 		{
-			windowState.mFramebufferResized = false;
-			NPoVulkanDeviceBehavior::recreate_swap_chains_for_resize(inOutResources, inOutState, settings, windowState.mpWindow);
+			 windowState.mFramebufferResized = false;
+			 NPoVulkanDeviceBehavior::recreate_swap_chains_for_resize(inOutResources, inOutState, settings, windowState.mpWindow);
 		}
 		else if (result != VK_SUCCESS)
 		{

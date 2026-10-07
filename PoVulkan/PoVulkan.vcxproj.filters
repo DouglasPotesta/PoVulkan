@@ -78,6 +78,9 @@
     <ClCompile Include="PoGame.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="PoMaterial.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="PoWindow.h">
@@ -176,6 +179,21 @@
     <ClInclude Include="PoGame.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="PoSlangPipelineLayoutBuilder.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="shaders\parameter_block_demo.slang">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PoShaderCursor.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PoBindlessResources.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PoReflectionDemo.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\simple_shader.vert" />
@@ -185,6 +203,7 @@
     </None>
     <None Include="shaders\simple_shader.geom" />
     <None Include="shaders\simple_shader.slang" />
+    <None Include="shaders\bindless_demo.slang" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="_plan.txt" />

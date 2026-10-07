@@ -10,13 +10,10 @@
 #include <mutex>
 #include <chrono>
 #include <random>
+#include "PoReflectionDemo.h"
 
 namespace NPoAppPrivate
 {
-	void sync_render_thread();
-
-	void sync_game_thread();
-
 	template <typename t>
 	t get_random_t()
 	{
@@ -80,7 +77,6 @@ namespace NPoAppPrivate
 		{
 			ImGui::UpdatePlatformWindows();
 			ImGui::RenderPlatformWindowsDefault();
-			// TODO for OpenGL: restore current GL context.
 		}
 	}
 
@@ -190,8 +186,26 @@ void NPoAppBehavior::run()
 	resizeCommand.mpSettings = &settings.mDevice;
 	resizeCommand.mpState = &state.mDevice;
 	glfwSetWindowUserPointer(pWindow, &resizeCommand);
+	VkPhysicalDeviceProperties deviceProperties;
+	vkGetPhysicalDeviceProperties(state.mDevice.mPhysicalDevice, &deviceProperties);
+	if (NPoSlangBehavior::refresh_compute_shader(resources.mDevice.mSlang, state.mDevice.mSlang, "shaders/parameter_block_demo.slang"))
+	{
+		using namespace NPoPipelineLayoutBuilder;
+		using namespace NPoReflectionDemo;
+		using namespace NPoShaderCursor;
 
-	
+		VkShaderModule computeModule;
+		Slang::ComPtr<slang::IComponentType> compositeProgram;
+		NPoSlangBehavior::get_current_compute_shader(computeModule, compositeProgram, state.mDevice.mSlang, resources.mDevice.mSlang, "shaders/parameter_block_demo.slang");
+		
+		
+		SProgramParameters programParameters;
+		SLayoutDescription description = build_layout_description(programParameters, compositeProgram->getLayout());
+		CPipelineLayouts pipelineLayoutBuilder = CPipelineLayouts::CreatePipelineLayouts(resources.mDevice.mLogicalDevice, deviceProperties.limits, description);
+		NPoReflectionDemo::run_demo(resources.mDevice, state.mDevice, settings.mDevice, description, pipelineLayoutBuilder, programParameters, computeModule);
+
+	}
+
 	auto getPrimaryWindowFunc = [&]() -> SPoWindowResources &
 		{
 			for (int i = 0; i < resources.mWindows.size(); ++i)
@@ -218,6 +232,10 @@ void NPoAppBehavior::run()
 		{
 			state.mWindows.push_back(NPoWindowBehavior::init(resources.mWindows.emplace_back(), settings.mWindow));
 			NPoVulkanDeviceBehavior::add_window(resources.mDevice, state.mDevice, settings.mDevice, resources.mWindows.back().mpWindow);
+		}
+		if (frame % 50 == 0)
+		{
+			NPoSlangBehavior::refresh_shaders(resources.mDevice.mSlang, state.mDevice.mSlang, settings.mDevice.mSlang);
 		}
 		for (size_t windowIndex = resources.mWindows.size(); windowIndex > 0; )
 		{

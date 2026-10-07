@@ -37,6 +37,7 @@ struct SPoVulkanWindowSettings
 	SPoVulkanSwapchainSettings mSwapchain;
 	std::array<SPoGameObjectSettings, NPoGameObjectBehavior::gk_max_game_objects> mGameObjects;
 	SPoGuiSettings mGui;
+	SPoVulkanPipelineSettings mPipeline = {};
 };
 
 struct SPoVulkanWindowState
@@ -49,6 +50,7 @@ struct SPoVulkanWindowState
 	SSwapchainSupportDetails mSwapchainSupportDetails = {};
 	SPoWindowId mUniqueId = {};
 	SPoGuiState mGui = {};
+	SPoVulkanPipelineState mPipeline = {};
 };
 
 struct SPoVulkanWindowResources
@@ -66,6 +68,7 @@ struct SPoVulkanWindowResources
 	std::vector<VkFence> mInFlightFences;
 	std::array<SPoGameObjectResources, NPoGameObjectBehavior::gk_max_game_objects> mGameObjects;
 	SPoGuiResources mGui = {};
+	SPoVulkanPipelineResources mPipeline = {};
 };
 
 struct SPoVulkanDeviceSettings
@@ -135,6 +138,11 @@ namespace NPoVulkanDeviceBehavior
 	void begin_command_buffer(VkCommandBuffer commandBuffer, VkCommandBufferUsageFlags const flags);
 	void begin_rendering(VkCommandBuffer commandBuffer, VkImage swapChainResolveImage, VkImage swapChainColorImage, VkImageView swapChainResolveImageView, VkImageView swapChainColorImageView, VkImageView swapChainDepthImageView, VkExtent2D const extent, VkFormat const colorFormat, VkClearValue const *pColorClear, VkClearValue const *pDepthClear);
 
+
+	void create_dynamic_graphics_pipeline(VkPipelineLayout &outPipelineLayout, VkPipeline &outGraphicsPipeline,
+		VkPipelineCache cache, VkDevice device, VkDescriptorSetLayout descriptorSetLayout,
+		SPoSlangState const &slangState, SPoSlangResources &slangResources, char const *pShaderFile,
+		VkSampleCountFlagBits const msaaSamples, VkFormat const colorFormat, VkFormat const depthFormat);
 	void create_command_buffers(std::vector<VkCommandBuffer> &outCommandBuffers, VkDevice device, VkCommandPool commandPool, int const imageCount);
 	void create_buffer(VkBuffer &inOutBuffer, VkDeviceMemory &inOutBufferMemory, VkDevice device, VkDeviceSize const size, VkBufferUsageFlags const usage, VkMemoryPropertyFlags const properties, VkPhysicalDeviceMemoryProperties const &memoryProperties);
 	void copy_buffer_to_image(VkImage image, VkBuffer buffer, VkDevice device, VkCommandPool commandPool, VkQueue graphicsQueue, uint32_t const width, uint32_t const height);

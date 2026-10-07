@@ -19,6 +19,7 @@ struct SPoTextureSettings
 {
 	std::string mPath = "textures/viking_room.png";
 	EPoMipmapCreationType  mMipMapCreationType = EPoMipmapCreationType::Max;
+	VkFormat mImageFormat = VK_FORMAT_R8G8B8A8_SRGB;
 };
 
 struct SPoTextureState
